@@ -11,6 +11,6 @@
 | Nombre             | Nicknames                                |
 |:------------------:|:----------------------------------------:|
 | Hoffmann Francisco | Froxtrop / Francisco Gabriel Hoffmann    |
-| Crotti Tomás       |                                          |
+| Crotti Tomás       | tomascrotti                              |
 | Crego Agustina     | Agusrc20                                 |
 
