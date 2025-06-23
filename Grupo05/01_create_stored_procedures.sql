@@ -205,3 +205,110 @@ BEGIN
         @id_socio AS id_socio_insertado;
 END
 GO
+
+/***********************************************************************
+Nombre del procedimiento: inscripcion_socio_menor_sp
+Descripción: Registra a un menor como socio y crea el vínculo con su responsable.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.inscripcion_socio_menor_sp
+    -- Datos del menor
+    @nombre_menor VARCHAR(50),
+    @apellido_menor VARCHAR(50),
+    @dni_menor INT,
+    @email_menor VARCHAR(255) = NULL,
+    @fecha_nac_menor DATE,
+    @telefono_menor VARCHAR(50) = NULL,
+    @obra_social VARCHAR(100) = NULL,
+    @nro_obra_social INT = NULL,
+    @telefono_emergencia VARCHAR(50) = NULL,
+
+    -- Datos del responsable
+    @nombre_resp VARCHAR(50),
+    @apellido_resp VARCHAR(50),
+    @dni_resp INT,
+    @email_resp VARCHAR(255) = NULL,
+    @fecha_nac_resp DATE,
+    @telefono_resp VARCHAR(50) = NULL,
+
+    -- Parentesco
+    @parentesco CHAR(1)  -- 'P', 'M' o 'T'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validación del parentesco
+    IF @parentesco NOT IN ('P','M','T')
+    BEGIN
+        RAISERROR('Parentesco inválido. Debe ser P, M o T.', 16, 1);
+        RETURN;
+    END
+
+    -- Validación: menor de edad
+    DECLARE @edad_menor INT = DATEDIFF(YEAR, @fecha_nac_menor, GETDATE());
+    IF (MONTH(@fecha_nac_menor) > MONTH(GETDATE())) OR 
+       (MONTH(@fecha_nac_menor) = MONTH(GETDATE()) AND DAY(@fecha_nac_menor) > DAY(GETDATE()))
+    BEGIN
+        SET @edad_menor = @edad_menor - 1;
+    END
+
+    IF @edad_menor >= 18
+    BEGIN
+        RAISERROR('La persona ingresada no es menor de edad.', 16, 1);
+        RETURN;
+    END
+
+    DECLARE @id_persona_menor INT;
+    DECLARE @id_socio_menor INT;
+    DECLARE @id_persona_resp INT;
+
+    -- Registrar menor como persona
+    EXEC socios.registrar_persona_sp
+        @nombre = @nombre_menor,
+        @apellido = @apellido_menor,
+        @dni = @dni_menor,
+        @email = @email_menor,
+        @fecha_de_nacimiento = @fecha_nac_menor,
+        @telefono = @telefono_menor,
+        @saldo = 0,
+        @id_persona = @id_persona_menor OUTPUT;
+
+    IF @id_persona_menor IS NULL RETURN;
+
+    -- Hacer socio al menor
+    EXEC socios.registrar_socio_sp
+        @id_persona = @id_persona_menor,
+        @obra_social = @obra_social,
+        @nro_obra_social = @nro_obra_social,
+        @telefono_emergencia = @telefono_emergencia,
+        @id_socio = @id_socio_menor OUTPUT;
+
+    IF @id_socio_menor IS NULL RETURN;
+
+    -- Registrar responsable (como persona común)
+    EXEC socios.registrar_persona_sp
+        @nombre = @nombre_resp,
+        @apellido = @apellido_resp,
+        @dni = @dni_resp,
+        @email = @email_resp,
+        @fecha_de_nacimiento = @fecha_nac_resp,
+        @telefono = @telefono_resp,
+        @saldo = 0,
+        @id_persona = @id_persona_resp OUTPUT;
+
+    IF @id_persona_resp IS NULL RETURN;
+
+    -- Crear vínculo en Parentesco
+    INSERT INTO socios.Parentesco (
+        id_persona, id_persona_responsable, parentesco, fecha_desde, fecha_hasta
+    ) VALUES (
+        @id_persona_menor, @id_persona_resp, @parentesco, GETDATE(), DATEADD(YEAR, 18, @fecha_nac_menor)
+    );
+
+    -- Devolver resultados
+    SELECT 
+        @id_persona_menor AS id_persona_menor,
+        @id_socio_menor AS id_socio_menor,
+        @id_persona_resp AS id_responsable;
+END
+GO
