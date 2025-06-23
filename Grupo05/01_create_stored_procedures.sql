@@ -101,11 +101,11 @@ GO
 /***********************************************************************
 Nombre del procedimiento: registrar_socio_sp
 Descripción: Registra a una persona existente como socio.
-Calcula la categoría en base a la edad.
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.registrar_socio_sp
-	@id_persona INT,
+    @id_persona INT,
+    @id_categoria SMALLINT,
     @obra_social VARCHAR(100) = NULL,
     @nro_obra_social INT = NULL,
     @telefono_emergencia VARCHAR(50) = NULL,
@@ -114,45 +114,34 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validar que la persona exista
+    -- Valida que la persona exista
     IF NOT EXISTS (SELECT 1 FROM socios.Persona WHERE id_persona = @id_persona)
     BEGIN
         RAISERROR('La persona indicada no existe en el sistema.', 16, 1);
         RETURN;
     END
 
-    -- Obtener fecha de nacimiento
-    DECLARE @fecha_nacimiento DATE;
-    SELECT @fecha_nacimiento = fecha_de_nacimiento FROM socios.Persona WHERE id_persona = @id_persona;
-
-    -- Calcular edad
-    DECLARE @edad INT = DATEDIFF(YEAR, @fecha_nacimiento, GETDATE());
-    IF (MONTH(@fecha_nacimiento) > MONTH(GETDATE())) OR 
-       (MONTH(@fecha_nacimiento) = MONTH(GETDATE()) AND DAY(@fecha_nacimiento) > DAY(GETDATE()))
-    BEGIN
-        SET @edad = @edad - 1;
-    END
-
-    -- Obtener categoría
-    DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad);
-
-    IF @id_categoria IS NULL
+    -- Valida categoría pasada
+    IF NOT EXISTS (SELECT 1 FROM socios.Categoria WHERE id_categoria = @id_categoria)
     BEGIN
         RAISERROR('No se encontró categoría para la edad.', 16, 1);
         RETURN;
     END
 
-    -- Inserción
+    -- Inserta en Socio
     INSERT INTO socios.Socio (
-		id_persona, id_categoria, fecha_de_alta, activo, obra_social, nro_obra_social, telefono_emergencia
-	) VALUES (
-		@id_persona, @id_categoria, GETDATE(), 1, @obra_social, @nro_obra_social, @telefono_emergencia
-	);
+        id_persona, id_categoria, fecha_de_alta, activo,
+        obra_social, nro_obra_social, telefono_emergencia
+    ) VALUES (
+        @id_persona, @id_categoria, GETDATE(), 1,
+        @obra_social, @nro_obra_social, @telefono_emergencia
+    );
 
-	-- Retorna el id del socio que acaba de insertar
+    -- Devuelve nuevo id_socio
     SET @id_socio = SCOPE_IDENTITY();
 END
 GO
+
 
 /***********************************************************************
 Nombre del procedimiento: inscripcion_socio_sp
@@ -189,12 +178,24 @@ BEGIN
 
     IF @id_persona IS NULL RETURN;
 
+	-- Calcular edad
+    DECLARE @edad INT = DATEDIFF(YEAR, @fecha_de_nacimiento, GETDATE());
+    IF (MONTH(@fecha_de_nacimiento) > MONTH(GETDATE())) OR 
+       (MONTH(@fecha_de_nacimiento) = MONTH(GETDATE()) AND DAY(@fecha_de_nacimiento) > DAY(GETDATE()))
+    BEGIN
+        SET @edad = @edad - 1;
+    END
+
+    -- Obtener categoría
+    DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad);
+
     -- Registrar socio
     EXEC socios.registrar_socio_sp
         @id_persona = @id_persona,
         @obra_social = @obra_social,
         @nro_obra_social = @nro_obra_social,
         @telefono_emergencia = @telefono_emergencia,
+		@id_categoria = @id_categoria,
         @id_socio = @id_socio OUTPUT;
 
     IF @id_socio IS NULL RETURN;
@@ -261,6 +262,7 @@ BEGIN
     DECLARE @id_persona_menor INT;
     DECLARE @id_socio_menor INT;
     DECLARE @id_persona_resp INT;
+    DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad_menor);
 
     -- Registrar menor como persona
     EXEC socios.registrar_persona_sp
@@ -274,13 +276,14 @@ BEGIN
         @id_persona = @id_persona_menor OUTPUT;
 
     IF @id_persona_menor IS NULL RETURN;
-
+	
     -- Hacer socio al menor
     EXEC socios.registrar_socio_sp
         @id_persona = @id_persona_menor,
         @obra_social = @obra_social,
         @nro_obra_social = @nro_obra_social,
         @telefono_emergencia = @telefono_emergencia,
+		@id_categoria = @id_categoria,
         @id_socio = @id_socio_menor OUTPUT;
 
     IF @id_socio_menor IS NULL RETURN;
@@ -312,3 +315,4 @@ BEGIN
         @id_persona_resp AS id_responsable;
 END
 GO
+
