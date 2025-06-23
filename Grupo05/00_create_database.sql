@@ -18,6 +18,7 @@
  ***********************************************************************/
 
 /* Creacion de la base de datos */
+
 IF DB_ID('Com2900G05') IS NULL
 BEGIN
     CREATE DATABASE Com2900G05;
