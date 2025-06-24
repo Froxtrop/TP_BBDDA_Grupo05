@@ -1,13 +1,3 @@
-SELECT * FROM socios.Categoria
-
-USE Com2900G05
-GO
-
-SELECT * FROM socios.Persona P
-JOIN socios.Socio S ON S.id_persona=P.id_persona
-SELECT * FROM socios.Persona
-SELECT * FROM socios.Parentesco
-
 USE Com2900G05
 GO
 EXEC socios.inscripcion_socio_sp
