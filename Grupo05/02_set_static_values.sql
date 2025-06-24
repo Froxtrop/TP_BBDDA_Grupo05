@@ -7,6 +7,7 @@ VALUES ('Menor', 0, 12),
        ('Cadete', 13, 17),
        ('Mayor', 18, NULL);
 SELECT * FROM socios.Categoria
+
 -- Carga de datos en la tabla tarifa categoría
 INSERT INTO socios.TarifaCategoria (valor, vigencia_desde, vigencia_hasta, id_categoria)
 VALUES (25000, '2025-01-01', '2025-05-31', 3),
@@ -18,3 +19,13 @@ SELECT * FROM socios.TarifaCategoria
 INSERT INTO socios.ActividadDeportiva(nombre)
 VALUES ('Futsal'),('Voley'),('Taekwondo'),('Baile artistico'),('Natacion'),('Ajedrez')
 SELECT * FROM socios.ActividadDeportiva
+
+-- Carga de datos en la tabla tarifa actividad deportiva
+INSERT INTO socios.TarifaActividadDeportiva(id_actividad_dep, vigente_desde, vigente_hasta, valor)
+VALUES (1, '2025-01-01', '2025-05-31', 25000),
+(2, '2025-01-01', '2025-05-31', 30000),
+(3, '2025-01-01', '2025-05-31', 25000),
+(4, '2025-01-01', '2025-05-31', 30000),
+(5, '2025-01-01', '2025-05-31', 45000),
+(6, '2025-01-01', '2025-05-31', 2000)
+SELECT * FROM socios.TarifaActividadDeportiva
