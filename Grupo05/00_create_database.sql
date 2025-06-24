@@ -1,3 +1,7 @@
+USE master
+GO
+DROP DATABASE Com2900G05
+GO
 /***********************************************************************
  * Enunciado: Cree la base de datos, entidades y relaciones. Incluya
  *		restricciones y claves. Deberá entregar un archivo .sql con 
@@ -91,7 +95,7 @@ GO
 IF OBJECT_ID(N'[socios].[TarifaCategoria]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.TarifaCategoria (
-		id_tarifa_categorria INT IDENTITY(1,1) PRIMARY KEY,
+		id_tarifa_categoria INT IDENTITY(1,1) PRIMARY KEY,
 		id_categoria SMALLINT NOT NULL,
 		valor DECIMAL(10,2) NOT NULL,
 		vigencia_desde DATE NOT NULL,
@@ -147,7 +151,7 @@ GO
 IF OBJECT_ID(N'[socios].[TarifaActividadDeportiva]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.TarifaActividadDeportiva (
-		id_tarifca_dep INT IDENTITY(1,1) PRIMARY KEY,
+		id_tarifa_dep INT IDENTITY(1,1) PRIMARY KEY,
 		id_actividad_dep INT NOT NULL,
 		vigente_desde DATE NOT NULL,
 		vigente_hasta DATE NOT NULL,
@@ -162,7 +166,7 @@ GO
 IF OBJECT_ID(N'[socios].[TarifaActividadRecreativa]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.TarifaActividadRecreativa (
-		id_tarifca_rec INT IDENTITY(1,1) PRIMARY KEY,
+		id_tarifa_rec INT IDENTITY(1,1) PRIMARY KEY,
 		id_actividad_rec INT NOT NULL,
 		vigente_desde DATE NOT NULL,
 		vigente_hasta DATE NOT NULL,
