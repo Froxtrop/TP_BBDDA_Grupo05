@@ -23,8 +23,25 @@ GO
 Nombre de la función: socios.fn_obtener_categoria_por_edad
 Descripción: Retorna el id_categoria correspondiente a una edad dada.
 ***********************************************************************/
+
+CREATE OR ALTER FUNCTION socios.fn_obtener_edad_por_fnac(
+	@fnac INT
+)
+RETURNS SMALLINT
+AS
+BEGIN
+	DECLARE @edad INT = DATEDIFF(YEAR, @fnac, GETDATE());
+    IF (MONTH(@fnac) > MONTH(GETDATE())) OR 
+       (MONTH(@fnac) = MONTH(GETDATE()) AND DAY(@fnac) > DAY(GETDATE()))
+    BEGIN
+        SET @edad = @edad - 1;
+    END
+	RETURN @edad;
+END
+GO
+
 CREATE OR ALTER FUNCTION socios.fn_obtener_categoria_por_edad (
-    @edad INT
+    @edad SMALLINT
 )
 RETURNS SMALLINT
 AS
@@ -179,12 +196,7 @@ BEGIN
     IF @id_persona IS NULL RETURN;
 
 	-- Calcular edad
-    DECLARE @edad INT = DATEDIFF(YEAR, @fecha_de_nacimiento, GETDATE());
-    IF (MONTH(@fecha_de_nacimiento) > MONTH(GETDATE())) OR 
-       (MONTH(@fecha_de_nacimiento) = MONTH(GETDATE()) AND DAY(@fecha_de_nacimiento) > DAY(GETDATE()))
-    BEGIN
-        SET @edad = @edad - 1;
-    END
+    DECLARE @edad SMALLINT = socio.fn_obtener_edad_por_fnac(@fecha_de_nacimiento);
 
     -- Obtener categoría
     DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad);
@@ -316,3 +328,58 @@ BEGIN
 END
 GO
 
+/***********************************************************************
+Nombre del procedimiento: inscribir_socio_a_actividad_sp
+Descripción: Inscribe a un socio en una actividad deportiva.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.inscribir_socio_a_actividad_dep_sp
+    @id_socio INT,
+    @id_actividad_deportiva INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validar que el socio exista
+    IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio)
+    BEGIN
+        RAISERROR('El socio no existe.', 16, 1);
+        RETURN;
+    END
+
+    -- Validar que la actividad deportiva exista
+    IF NOT EXISTS (SELECT 1 FROM socios.ActividadDeportiva WHERE id_actividad_dep = @id_actividad_deportiva)
+    BEGIN
+        RAISERROR('La actividad deportiva no existe.', 16, 1);
+        RETURN;
+    END
+
+    -- Validar que no esté ya inscrito
+    IF EXISTS (
+        SELECT 1 
+        FROM socios.InscripcionActividadDeportiva
+        WHERE id_socio = @id_socio
+          AND id_actividad_dep = @id_actividad_deportiva
+    )
+    BEGIN
+        RAISERROR('El socio ya está inscrito en esta actividad.', 16, 1);
+        RETURN;
+    END
+
+    -- Insertar la inscripción
+    INSERT INTO socios.InscripcionActividadDeportiva (
+        id_socio,
+        id_actividad_dep,
+        fecha_inscripcion,
+        fecha_baja
+    )
+    VALUES (
+        @id_socio,
+        @id_actividad_deportiva,
+        GETDATE(),
+		NULL
+		);
+
+    PRINT 'Inscripción realizada correctamente.';
+END
+GO
