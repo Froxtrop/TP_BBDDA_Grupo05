@@ -29,3 +29,17 @@ VALUES (1, '2025-01-01', '2025-05-31', 25000),
 (5, '2025-01-01', '2025-05-31', 45000),
 (6, '2025-01-01', '2025-05-31', 2000)
 SELECT * FROM socios.TarifaActividadDeportiva
+
+-- Carga de datos en la tabla actividad recreativa
+INSERT INTO socios.ActividadRecreativa(nombre)
+VALUES ('Sum'),('Pileta'),('Colonia de verano')
+SELECT * FROM socios.ActividadRecreativa
+
+-- Carga de datos en la tabla tarifa actividad recreativa
+INSERT INTO socios.TarifaActividadRecreativa(id_actividad_rec, vigente_desde, vigente_hasta, valor, modalidad, edad_maxima, invitado)
+VALUES
+(1, '2025-01-01', '2025-05-28', 25000),
+(2, '2025-01-01', '2025-05-28', 30000),
+(3, '2025-01-01', '2025-05-28', 25000),
+SELECT * FROM socios.TarifaActividadDeportiva
+
