@@ -169,10 +169,10 @@ BEGIN
 		id_tarifa_rec INT IDENTITY(1,1) PRIMARY KEY,
 		id_actividad_rec INT NOT NULL,
 		vigente_desde DATE NOT NULL,
-		vigente_hasta DATE NOT NULL,
+		vigente_hasta DATE NULL,
 		valor DECIMAL(10,2) NOT NULL,
 		modalidad VARCHAR(10) NOT NULL,
-		edad_maxima INT NOT NULL,
+		edad_maxima INT NULL,
 		invitado BIT NOT NULL,
 		CONSTRAINT fk_TarifaActividadRecreativa_id_actividad_rec FOREIGN KEY (id_actividad_rec) REFERENCES socios.ActividadRecreativa(id_actividad_rec)
 	);
