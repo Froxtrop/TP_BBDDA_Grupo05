@@ -272,3 +272,97 @@ BEGIN CATCH
     PRINT 'Error eliminación socio no existe/desactivado: ' + ERROR_MESSAGE();
 END CATCH;
 
+/*
+ ___                     _            _                              _       
+|_ _|_ __  ___  ___ _ __(_)_ __   ___(_) ___  _ __    ___  ___   ___(_) ___  
+ | || '_ \/ __|/ __| '__| | '_ \ / __| |/ _ \| '_ \  / __|/ _ \ / __| |/ _ \ 
+ | || | | \__ \ (__| |  | | |_) | (__| | (_) | | | | \__ \ (_) | (__| | (_) |
+|___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| |___/\___/ \___|_|\___/ 
+                          |_|                                                
+*/
+
+
+DECLARE @id_persona INT, @id_socio INT;
+-- CASOS EXITOSOS ----------------------------------------------------
+-- 1) INSERT: Inscripción de persona y socio
+EXEC socios.inscripcion_socio_sp
+    @nombre = 'Carla',
+    @apellido = 'Domínguez',
+    @dni = 31234567,
+    @email = 'carla.dom@example.com',
+    @fecha_de_nacimiento = '2000-05-15',
+    @telefono = '011-2233-4455',
+    @obra_social = 'OSDE',
+    @nro_obra_social = 556677,
+    @telefono_emergencia = '011-8877-6655',
+    @id_persona = @id_persona OUTPUT,
+    @id_socio = @id_socio OUTPUT;
+PRINT 'Persona ID: ' + CAST(@id_persona AS VARCHAR);
+PRINT 'Socio ID: ' + CAST(@id_socio AS VARCHAR);
+
+-- 2) UPDATE: Modificar persona y socio asociados
+EXEC socios.actualizar_inscripcion_socio_sp
+    @id_persona = @id_persona,
+    @nombre = 'Carla Eugenia',
+    @apellido = 'Domínguez Torres',
+    @dni = 31234567,
+    @email = 'carla.eugenia@example.com',
+    @fecha_de_nacimiento = '2000-05-15',
+    @telefono = '011-3344-5566',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 998877,
+    @telefono_emergencia = '011-0000-1111';
+
+-- 3) DELETE: Dar de baja inscripción del socio
+EXEC socios.baja_inscripcion_socio_sp @id_persona = @id_persona;
+
+-- CASOS DE ERROR -----------------------------------------------------
+-- 4) INSERT ERROR: inscripción con DNI duplicado
+BEGIN TRY
+    EXEC socios.inscripcion_socio_sp
+        @nombre = 'Carla',
+        @apellido = 'Domínguez',
+        @dni = 31234567,
+        @fecha_de_nacimiento = '2000-05-15',
+        @id_persona = @id_persona OUTPUT,
+        @id_socio = @id_socio OUTPUT;
+END TRY
+BEGIN CATCH
+    PRINT 'Error esperado (DNI duplicado): ' + ERROR_MESSAGE();
+END CATCH;
+
+-- 5) UPDATE ERROR: persona inexistente
+BEGIN TRY
+    EXEC socios.actualizar_inscripcion_socio_sp
+        @id_persona = 9999,
+        @nombre = 'Inexistente',
+        @apellido = 'Ejemplo',
+        @dni = 11111111,
+        @email = 'fake@example.com',
+        @fecha_de_nacimiento = '1990-01-01',
+        @telefono = '000-0000',
+        @obra_social = 'Ninguna',
+        @nro_obra_social = NULL,
+        @telefono_emergencia = NULL;
+END TRY
+BEGIN CATCH
+    PRINT 'Error esperado (persona no existe): ' + ERROR_MESSAGE();
+END CATCH;
+
+-- 6) DELETE ERROR: intentar dar de baja nuevamente (ya inactivo)
+BEGIN TRY
+    EXEC socios.baja_inscripcion_socio_sp @id_persona = @id_persona;
+END TRY
+BEGIN CATCH
+    PRINT 'Error esperado (ya desactivado): ' + ERROR_MESSAGE();
+END CATCH;
+
+-- 7) DELETE ERROR: baja de persona inexistente
+BEGIN TRY
+    EXEC socios.baja_inscripcion_socio_sp @id_persona = 9999;
+END TRY
+BEGIN CATCH
+    PRINT 'Error esperado (persona no existe): ' + ERROR_MESSAGE();
+END CATCH;
+
+GO

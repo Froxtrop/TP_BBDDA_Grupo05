@@ -25,7 +25,7 @@ Descripción: Retorna la edad correspondiente a una fecha de nacimiento dada.
 ***********************************************************************/
 
 CREATE OR ALTER FUNCTION socios.fn_obtener_edad_por_fnac(
-	@fnac INT
+	@fnac DATE
 )
 RETURNS SMALLINT
 AS
@@ -346,29 +346,35 @@ BEGIN
 END
 GO
 
-
+/*
+	 ___                     _            _                              _       
+	|_ _|_ __  ___  ___ _ __(_)_ __   ___(_) ___  _ __    ___  ___   ___(_) ___  
+	 | || '_ \/ __|/ __| '__| | '_ \ / __| |/ _ \| '_ \  / __|/ _ \ / __| |/ _ \ 
+	 | || | | \__ \ (__| |  | | |_) | (__| | (_) | | | | \__ \ (_) | (__| | (_) |
+	|___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| |___/\___/ \___|_|\___/ 
+                          |_|                                                
+*/
 
 /***********************************************************************
-Nombre del procedimiento: inscripcion_socio_sp
-Descripción: Registra una persona y la convierte en socio.
+Nombre del procedimiento: socios.inscripcion_socio_sp
+Descripción: Registra una persona y la convierte en socio según su edad.
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.inscripcion_socio_sp
-	@nombre VARCHAR(50),
-	@apellido VARCHAR(50),
+    @nombre VARCHAR(50),
+    @apellido VARCHAR(50),
     @dni INT,
     @email VARCHAR(255) = NULL,
     @fecha_de_nacimiento DATE,
     @telefono VARCHAR(50) = NULL,
     @obra_social VARCHAR(100) = NULL,
     @nro_obra_social INT = NULL,
-    @telefono_emergencia VARCHAR(50) = NULL
+    @telefono_emergencia VARCHAR(50) = NULL,
+    @id_persona INT OUTPUT,
+    @id_socio INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    DECLARE @id_persona INT;
-    DECLARE @id_socio INT;
 
     -- Registrar persona
     EXEC socios.registrar_persona_sp
@@ -383,10 +389,8 @@ BEGIN
 
     IF @id_persona IS NULL RETURN;
 
-	-- Calcular edad
-    DECLARE @edad SMALLINT = socio.fn_obtener_edad_por_fnac(@fecha_de_nacimiento);
-
-    -- Obtener categoría
+    -- Calcular edad
+    DECLARE @edad SMALLINT = socios.fn_obtener_edad_por_fnac(@fecha_de_nacimiento);
     DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad);
 
     -- Registrar socio
@@ -395,17 +399,94 @@ BEGIN
         @obra_social = @obra_social,
         @nro_obra_social = @nro_obra_social,
         @telefono_emergencia = @telefono_emergencia,
-		@id_categoria = @id_categoria,
+        @id_categoria = @id_categoria,
         @id_socio = @id_socio OUTPUT;
-
-    IF @id_socio IS NULL RETURN;
-
-    -- Retorno de los id que acaba de insertar
-    SELECT 
-        @id_persona AS id_persona_insertada,
-        @id_socio AS id_socio_insertado;
-END
+END;
 GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.actualizar_inscripcion_socio_sp
+Descripción: Actualiza los datos de una inscripción de socio.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+GO
+CREATE OR ALTER PROCEDURE socios.actualizar_inscripcion_socio_sp
+    @id_persona INT,
+    @nombre VARCHAR(50),
+    @apellido VARCHAR(50),
+    @dni INT,
+    @email VARCHAR(255) = NULL,
+    @fecha_de_nacimiento DATE,
+    @telefono VARCHAR(50) = NULL,
+    @obra_social VARCHAR(100) = NULL,
+    @nro_obra_social INT = NULL,
+    @telefono_emergencia VARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Actualizar persona
+    EXEC socios.actualizar_persona_sp
+        @id_persona = @id_persona,
+        @nombre = @nombre,
+        @apellido = @apellido,
+        @dni = @dni,
+        @email = @email,
+        @fecha_de_nacimiento = @fecha_de_nacimiento,
+        @telefono = @telefono,
+        @saldo = 0;
+
+    -- Obtener socio activo
+    DECLARE @id_socio INT;
+    SELECT @id_socio = id_socio FROM socios.Socio WHERE id_persona = @id_persona AND activo = 1;
+
+    IF @id_socio IS NULL
+    BEGIN
+        RAISERROR('No se encontró un socio activo para esta persona.', 16, 1);
+        RETURN;
+    END
+
+    -- Calcular edad y categoría
+    DECLARE @edad SMALLINT = socios.fn_obtener_edad_por_fnac(@fecha_de_nacimiento);
+    DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad);
+
+    -- Actualizar socio
+    EXEC socios.actualizar_socio_sp
+        @id_socio = @id_socio,
+        @id_categoria = @id_categoria,
+        @obra_social = @obra_social,
+        @nro_obra_social = @nro_obra_social,
+        @telefono_emergencia = @telefono_emergencia;
+END;
+GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.baja_inscripcion_socio_sp
+Descripción: Da de baja una inscripción de socio (borrado lógico del socio).
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+GO
+CREATE OR ALTER PROCEDURE socios.baja_inscripcion_socio_sp
+    @id_persona INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Obtener socio activo
+    DECLARE @id_socio INT;
+    SELECT @id_socio = id_socio FROM socios.Socio WHERE id_persona = @id_persona AND activo = 1;
+
+    IF @id_socio IS NULL
+    BEGIN
+        RAISERROR('No se encontró un socio activo para esta persona.', 16, 1);
+        RETURN;
+    END
+
+    -- Dar de baja el socio
+    EXEC socios.eliminar_socio_sp @id_socio = @id_socio;
+END;
+GO
+
 
 /***********************************************************************
 Nombre del procedimiento: inscripcion_socio_menor_sp
