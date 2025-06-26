@@ -20,8 +20,8 @@ USE Com2900G05;
 GO
 
  /***********************************************************************
-Nombre de la función: socios.fn_obtener_categoria_por_edad
-Descripción: Retorna el id_categoria correspondiente a una edad dada.
+Nombre de la función: socios.fn_obtener_edad_por_fnac
+Descripción: Retorna la edad correspondiente a una fecha de nacimiento dada.
 ***********************************************************************/
 
 CREATE OR ALTER FUNCTION socios.fn_obtener_edad_por_fnac(
@@ -40,6 +40,11 @@ BEGIN
 END
 GO
 
+/***********************************************************************
+Nombre de la función: socios.fn_obtener_categoria_por_edad
+Descripción: Retorna el id_categoria correspondiente a una edad dada.
+***********************************************************************/
+
 CREATE OR ALTER FUNCTION socios.fn_obtener_categoria_por_edad (
     @edad SMALLINT
 )
@@ -56,15 +61,17 @@ BEGIN
 END
 GO
 
+-- ================================================================================================
+
 /***********************************************************************
-Nombre del procedimiento: registrar_persona_sp
+Nombre del procedimiento: socios.registrar_persona_sp
 Descripción: Registra una persona en la tabla [Persona] validando datos.
 Devuelve el id_persona insertado por parámetro OUTPUT.
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.registrar_persona_sp
-	@nombre VARCHAR(50),
-	@apellido VARCHAR(50),
+    @nombre VARCHAR(50),
+    @apellido VARCHAR(50),
     @dni INT,
     @email VARCHAR(255) = NULL,
     @fecha_de_nacimiento DATE,
@@ -105,15 +112,101 @@ BEGIN
 
     -- Inserción
     INSERT INTO socios.Persona (
-		nombre, apellido, dni, email, fecha_de_nacimiento, telefono, saldo
-	) VALUES (
-		@nombre, @apellido, @dni, @email, @fecha_de_nacimiento, @telefono, @saldo
-	);
+        nombre, apellido, dni, email, fecha_de_nacimiento, telefono, saldo
+    ) VALUES (
+        @nombre, @apellido, @dni, @email, @fecha_de_nacimiento, @telefono, @saldo
+    );
 
     -- Retorna el id de la persona que acaba de insertar
     SET @id_persona = SCOPE_IDENTITY();
 END
 GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.actualizar_persona_sp
+Descripción: Actualiza los datos de una persona existente validando cambios.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.actualizar_persona_sp
+    @id_persona INT,
+    @nombre VARCHAR(50),
+    @apellido VARCHAR(50),
+    @dni INT,
+    @email VARCHAR(255) = NULL,
+    @fecha_de_nacimiento DATE,
+    @telefono VARCHAR(50) = NULL,
+    @saldo DECIMAL(10,2) = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validar existencia de la persona
+    IF NOT EXISTS (SELECT 1 FROM socios.Persona WHERE id_persona = @id_persona)
+    BEGIN
+        RAISERROR('La persona indicada no existe.', 16, 1);
+        RETURN;
+    END
+
+    -- Validación: DNI único (excluyendo el propio registro)
+    IF EXISTS (SELECT 1 FROM socios.Persona WHERE dni = @dni AND id_persona <> @id_persona)
+    BEGIN
+        RAISERROR('Otro registro ya tiene ese DNI.', 16, 1);
+        RETURN;
+    END
+
+    -- Validación: Fecha de nacimiento no futura
+    IF @fecha_de_nacimiento > CAST(GETDATE() AS DATE)
+    BEGIN
+        RAISERROR('La fecha de nacimiento no puede ser futura.', 16, 1);
+        RETURN;
+    END
+
+    -- Validación: Email básico
+    IF @email IS NOT NULL AND @email NOT LIKE '%@%.%'
+    BEGIN
+        RAISERROR('El email ingresado no es válido.', 16, 1);
+        RETURN;
+    END
+
+    -- Validación: Saldo no negativo
+    IF @saldo < 0
+    BEGIN
+        RAISERROR('El saldo no puede ser negativo.', 16, 1);
+        RETURN;
+    END
+
+    -- Actualización
+    UPDATE socios.Persona
+    SET
+        nombre = @nombre,
+        apellido = @apellido,
+        dni = @dni,
+        email = @email,
+        fecha_de_nacimiento = @fecha_de_nacimiento,
+        telefono = @telefono,
+        saldo = @saldo
+    WHERE id_persona = @id_persona;
+END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.eliminar_persona_sp
+Descripción: No permite eliminar físicamente una persona del sistema.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.eliminar_persona_sp
+    @id_persona INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Intento de eliminación bloqueado
+    RAISERROR('No se puede eliminar una persona del sistema.', 16, 1);
+    RETURN;
+END
+GO
+
+-- ================================================================================================
 
 /***********************************************************************
 Nombre del procedimiento: registrar_socio_sp
@@ -383,3 +476,60 @@ BEGIN
     PRINT 'Inscripción realizada correctamente.';
 END
 GO
+
+/***********************************************************************
+Nombre del procedimiento: inscribir_socio_a_actividad_rec_sp
+Descripción: Inscribe a un socio en una actividad recreativa.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.inscribir_socio_a_actividad_rec_sp
+    @id_socio INT,
+    @id_actividad_recreativa INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validar que el socio exista
+    IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio)
+    BEGIN
+        RAISERROR('El socio no existe.', 16, 1);
+        RETURN;
+    END
+
+    -- Validar que la actividad recreativa exista
+    IF NOT EXISTS (SELECT 1 FROM socios.ActividadRecreativa WHERE id_actividad_rec = @id_actividad_recreativa)
+    BEGIN
+        RAISERROR('La actividad recreativa no existe.', 16, 1);
+        RETURN;
+    END
+
+    -- Validar que no esté ya inscrito
+    IF EXISTS (
+        SELECT 1
+          FROM socios.InscripcionActividadRecreativa
+         WHERE id_socio         = @id_socio
+           AND id_actividad_rec = @id_actividad_recreativa
+    )
+    BEGIN
+        RAISERROR('El socio ya está inscrito en esta actividad recreativa.', 16, 1);
+        RETURN;
+    END
+
+    -- Insertar la inscripción
+    INSERT INTO socios.InscripcionActividadRecreativa (
+        id_actividad_rec,
+        id_socio,
+        fecha_inscripcion,
+        fecha_baja
+    )
+    VALUES (
+        @id_actividad_recreativa,
+        @id_socio,
+        GETDATE(),
+        NULL
+    );
+
+    PRINT 'Inscripción a actividad recreativa realizada correctamente.';
+END
+GO
+
