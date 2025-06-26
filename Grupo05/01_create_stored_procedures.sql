@@ -122,6 +122,13 @@ BEGIN
 END
 GO
 
+/*		 ____  _____ ____  ____   ___  _   _    _    
+		|  _ \| ____|  _ \/ ___| / _ \| \ | |  / \   
+		| |_) |  _| | |_) \___ \| | | |  \| | / ^ \  
+		|  __/| |___|  _ < ___) | |_| | |\  |/ ___ \ 
+		|_|   |_____|_| \_\____/ \___/|_| \_/_/   \_\
+*/
+
 /***********************************************************************
 Nombre del procedimiento: socios.actualizar_persona_sp
 Descripción: Actualiza los datos de una persona existente validando cambios.
@@ -206,11 +213,17 @@ BEGIN
 END
 GO
 
--- ================================================================================================
+/*       		 ____   ___   ____ ___ ___  
+				/ ___| / _ \ / ___|_ _/ _ \ 
+				\___ \| | | | |    | | | | |
+				 ___) | |_| | |___ | | |_| |
+				|____/ \___/ \____|___\___/ 
+*/
 
 /***********************************************************************
-Nombre del procedimiento: registrar_socio_sp
+Nombre del procedimiento: socios.registrar_socio_sp
 Descripción: Registra a una persona existente como socio.
+Devuelve el id_socio insertado por parámetro OUTPUT.
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.registrar_socio_sp
@@ -224,33 +237,115 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Valida que la persona exista
+    -- Validación: Persona existe
     IF NOT EXISTS (SELECT 1 FROM socios.Persona WHERE id_persona = @id_persona)
     BEGIN
         RAISERROR('La persona indicada no existe en el sistema.', 16, 1);
         RETURN;
     END
 
-    -- Valida categoría pasada
-    IF NOT EXISTS (SELECT 1 FROM socios.Categoria WHERE id_categoria = @id_categoria)
+    -- Validación: No duplicar socio para misma persona
+    IF EXISTS (SELECT 1 FROM socios.Socio WHERE id_persona = @id_persona AND activo = 1)
     BEGIN
-        RAISERROR('No se encontró categoría para la edad.', 16, 1);
+        RAISERROR('La persona ya es un socio activo.', 16, 1);
         RETURN;
     END
 
-    -- Inserta en Socio
+    -- Validación: Categoría válida
+    IF NOT EXISTS (SELECT 1 FROM socios.Categoria WHERE id_categoria = @id_categoria)
+    BEGIN
+        RAISERROR('Categoría no válida.', 16, 1);
+        RETURN;
+    END
+
+    -- Inserción
     INSERT INTO socios.Socio (
-        id_persona, id_categoria, fecha_de_alta, activo,
-        obra_social, nro_obra_social, telefono_emergencia
+        id_persona,
+        id_categoria,
+        fecha_de_alta,
+        activo,
+        obra_social,
+        nro_obra_social,
+        telefono_emergencia
     ) VALUES (
-        @id_persona, @id_categoria, GETDATE(), 1,
-        @obra_social, @nro_obra_social, @telefono_emergencia
+        @id_persona,
+        @id_categoria,
+        CAST(GETDATE() AS DATE),
+        1,
+        @obra_social,
+        @nro_obra_social,
+        @telefono_emergencia
     );
 
-    -- Devuelve nuevo id_socio
     SET @id_socio = SCOPE_IDENTITY();
 END
 GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.actualizar_socio_sp
+Descripción: Actualiza los datos de un socio existente.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.actualizar_socio_sp
+    @id_socio INT,
+    @id_categoria SMALLINT,
+    @obra_social VARCHAR(100) = NULL,
+    @nro_obra_social INT = NULL,
+    @telefono_emergencia VARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validación: Socio existe y está activo
+    IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio AND activo = 1)
+    BEGIN
+        RAISERROR('El socio indicado no existe o no está activo.', 16, 1);
+        RETURN;
+    END
+
+    -- Validación: Categoría válida
+    IF NOT EXISTS (SELECT 1 FROM socios.Categoria WHERE id_categoria = @id_categoria)
+    BEGIN
+        RAISERROR('Categoría no válida.', 16, 1);
+        RETURN;
+    END
+
+    -- Actualización
+    UPDATE socios.Socio
+    SET
+        id_categoria = @id_categoria,
+        obra_social = @obra_social,
+        nro_obra_social = @nro_obra_social,
+        telefono_emergencia = @telefono_emergencia
+    WHERE id_socio = @id_socio;
+END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.eliminar_socio_sp
+Descripción: Desactiva lógicamente un socio (borrado lógico).
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.eliminar_socio_sp
+    @id_socio INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validación: Socio existe y está activo
+    IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio AND activo = 1)
+    BEGIN
+        RAISERROR('El socio indicado no existe o ya está desactivado.', 16, 1);
+        RETURN;
+    END
+
+    -- Desactivación lógica
+    UPDATE socios.Socio
+    SET activo = 0
+    WHERE id_socio = @id_socio;
+END
+GO
+
 
 
 /***********************************************************************

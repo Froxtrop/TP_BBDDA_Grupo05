@@ -1,5 +1,11 @@
 USE Com2900G05;
 GO
+/*		 ____  _____ ____  ____   ___  _   _    _    
+		|  _ \| ____|  _ \/ ___| / _ \| \ | |  / \   
+		| |_) |  _| | |_) \___ \| | | |  \| | / ^ \  
+		|  __/| |___|  _ < ___) | |_| | |\  |/ ___ \ 
+		|_|   |_____|_| \_\____/ \___/|_| \_/_/   \_\
+*/
 
 -- CASOS EXITOSOS ----------------------------------------------------
 -- 1) INSERT: Registrar una nueva persona
@@ -15,6 +21,7 @@ EXEC socios.registrar_persona_sp
     @id_persona = @nuevo_id OUTPUT;
 PRINT 'ID de persona insertada: ' + CAST(@nuevo_id AS VARCHAR(10));
 SELECT * FROM socios.Persona WHERE id_persona = @nuevo_id;
+
 
 -- 2) UPDATE: Modificar los datos de la persona recién creada
 EXEC socios.actualizar_persona_sp
@@ -166,5 +173,102 @@ BEGIN TRY
 END TRY
 BEGIN CATCH
     PRINT 'Error en actualización saldo negativo: ' + ERROR_MESSAGE();
+END CATCH;
+
+GO
+
+/*				 ____   ___   ____ ___ ___  
+				/ ___| / _ \ / ___|_ _/ _ \ 
+				\___ \| | | | |    | | | | |
+				 ___) | |_| | |___ | | |_| |
+				|____/ \___/ \____|___\___/ 
+*/
+
+DECLARE @socio_id INT;
+-- CASOS EXITOSOS ----------------------------------------------------
+-- 1) INSERT: Registrar nuevo socio
+EXEC socios.registrar_socio_sp
+    @id_persona = 1,
+    @id_categoria = 2,
+    @obra_social = 'OSDE',
+    @nro_obra_social = 123456,
+    @telefono_emergencia = '011-9999-0000',
+    @id_socio = @socio_id OUTPUT;
+PRINT 'ID de socio insertado: ' + CAST(@socio_id AS VARCHAR(10));
+SELECT * FROM socios.Socio WHERE id_socio = @socio_id;
+
+-- 2) UPDATE: Modificar datos del socio
+EXEC socios.actualizar_socio_sp
+    @id_socio = @socio_id,
+    @id_categoria = 3,
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 654321,
+    @telefono_emergencia = '011-1111-2222';
+SELECT * FROM socios.Socio WHERE id_socio = @socio_id;
+
+-- 3) DELETE: Desactivar socio
+EXEC socios.eliminar_socio_sp @id_socio = @socio_id;
+SELECT * FROM socios.Socio WHERE id_socio = @socio_id;
+
+-- CASOS DE ERROR -----------------------------------------------------
+BEGIN TRY
+    -- 4) INSERT ERROR: Persona no existe
+    EXEC socios.registrar_socio_sp
+        @id_persona = 999,
+        @id_categoria = 2,
+        @id_socio = @socio_id OUTPUT;
+END TRY
+BEGIN CATCH
+    PRINT 'Error inserción socio persona no existe: ' + ERROR_MESSAGE();
+END CATCH;
+
+BEGIN TRY
+    -- 5) INSERT ERROR: Socio duplicado
+    EXEC socios.registrar_socio_sp
+        @id_persona = 1,
+        @id_categoria = 2,
+        @id_socio = @socio_id OUTPUT;
+END TRY
+BEGIN CATCH
+    PRINT 'Error inserción socio duplicado: ' + ERROR_MESSAGE();
+END CATCH;
+
+BEGIN TRY
+    -- 6) INSERT ERROR: Categoría inválida
+    EXEC socios.registrar_socio_sp
+        @id_persona = 1,
+        @id_categoria = 999,
+        @id_socio = @socio_id OUTPUT;
+END TRY
+BEGIN CATCH
+    PRINT 'Error inserción categoría inválida: ' + ERROR_MESSAGE();
+END CATCH;
+
+BEGIN TRY
+    -- 7) UPDATE ERROR: Socio inexistente o inactivo
+    EXEC socios.actualizar_socio_sp
+        @id_socio = 999,
+        @id_categoria = 2;
+END TRY
+BEGIN CATCH
+    PRINT 'Error actualización socio no existe/inactivo: ' + ERROR_MESSAGE();
+END CATCH;
+
+BEGIN TRY
+    -- 8) UPDATE ERROR: Categoría inválida
+    EXEC socios.actualizar_socio_sp
+        @id_socio = @socio_id,
+        @id_categoria = 999;
+END TRY
+BEGIN CATCH
+    PRINT 'Error actualización categoría inválida: ' + ERROR_MESSAGE();
+END CATCH;
+
+BEGIN TRY
+    -- 9) DELETE ERROR: Socio inexistente o ya desactivado
+    EXEC socios.eliminar_socio_sp @id_socio = 999;
+END TRY
+BEGIN CATCH
+    PRINT 'Error eliminación socio no existe/desactivado: ' + ERROR_MESSAGE();
 END CATCH;
 
