@@ -1,3 +1,7 @@
+USE master
+GO
+DROP DATABASE Com2900G05
+GO
 /***********************************************************************
  * Enunciado: Cree la base de datos, entidades y relaciones. Incluya
  *		restricciones y claves. Deberá entregar un archivo .sql con 
@@ -91,7 +95,7 @@ GO
 IF OBJECT_ID(N'[socios].[TarifaCategoria]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.TarifaCategoria (
-		id_tarifa_categorria INT IDENTITY(1,1) PRIMARY KEY,
+		id_tarifa_categoria INT IDENTITY(1,1) PRIMARY KEY,
 		id_categoria SMALLINT NOT NULL,
 		valor DECIMAL(10,2) NOT NULL,
 		vigencia_desde DATE NOT NULL,
@@ -147,7 +151,7 @@ GO
 IF OBJECT_ID(N'[socios].[TarifaActividadDeportiva]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.TarifaActividadDeportiva (
-		id_tarifca_dep INT IDENTITY(1,1) PRIMARY KEY,
+		id_tarifa_dep INT IDENTITY(1,1) PRIMARY KEY,
 		id_actividad_dep INT NOT NULL,
 		vigente_desde DATE NOT NULL,
 		vigente_hasta DATE NOT NULL,
@@ -162,13 +166,13 @@ GO
 IF OBJECT_ID(N'[socios].[TarifaActividadRecreativa]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.TarifaActividadRecreativa (
-		id_tarifca_rec INT IDENTITY(1,1) PRIMARY KEY,
+		id_tarifa_rec INT IDENTITY(1,1) PRIMARY KEY,
 		id_actividad_rec INT NOT NULL,
 		vigente_desde DATE NOT NULL,
-		vigente_hasta DATE NOT NULL,
+		vigente_hasta DATE NULL,
 		valor DECIMAL(10,2) NOT NULL,
 		modalidad VARCHAR(10) NOT NULL,
-		edad_maxima INT NOT NULL,
+		edad_maxima INT NULL,
 		invitado BIT NOT NULL,
 		CONSTRAINT fk_TarifaActividadRecreativa_id_actividad_rec FOREIGN KEY (id_actividad_rec) REFERENCES socios.ActividadRecreativa(id_actividad_rec)
 	);
@@ -201,6 +205,7 @@ BEGIN
 		id_socio INT NOT NULL,
 		fecha_inscripcion DATE NOT NULL,
 		fecha_baja DATE NULL,
+		modalidad VARCHAR(10) NOT NULL,
 		CONSTRAINT fk_InscripcionActividadRecreativa_id_actividad_rec FOREIGN KEY (id_actividad_rec) REFERENCES socios.ActividadRecreativa(id_actividad_rec),
 		CONSTRAINT fk_InscripcionActividadRecreativa_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio(id_socio)
 	);
@@ -256,6 +261,22 @@ ELSE
 	PRINT 'Ya existe la tabla [socios].[Factura]';
 GO
 
+IF OBJECT_ID(N'[socios].[Membresia]', N'U') IS NULL
+BEGIN
+	CREATE TABLE socios.Membresia (
+		id_membresia INT IDENTITY(1,1) PRIMARY KEY,
+		id_socio int NOT NULL,
+		id_factura INT NOT NULL,
+		total_bruto DECIMAL(10,2) NOT NULL,
+		total_neto DECIMAL(10,2) NOT NULL,
+		CONSTRAINT fk_Membresia_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio (id_socio),
+		CONSTRAINT fk_Factura_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura (id_factura)
+	);
+END
+ELSE
+	PRINT 'Ya existe la tabla [socios].[Factura]';
+GO
+
 IF OBJECT_ID(N'[socios].[FacturaResponsable]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.FacturaResponsable (
@@ -268,21 +289,6 @@ BEGIN
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[FacturaResponsable]';
-GO
-
-IF OBJECT_ID(N'[socios].[DetalleCuota]', N'U') IS NULL
-BEGIN
-	CREATE TABLE socios.DetalleCuota (
-		id_detalle_cuota INT IDENTITY(1,1) PRIMARY KEY,
-		id_socio INT NOT NULL,
-		id_factura INT NOT NULL,
-		monto DECIMAL(10,2) NOT NULL
-		CONSTRAINT fk_DetalleCuota_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio(id_socio),
-		CONSTRAINT fk_DetalleCuota_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura(id_factura)
-	);
-END
-ELSE
-	PRINT 'Ya existe la tabla [socios].[DetalleCuota]';
 GO
 
 IF OBJECT_ID(N'[socios].[DetalleInvitacion]', N'U') IS NULL
@@ -323,10 +329,10 @@ BEGIN
 	CREATE TABLE socios.DetalleDeportiva (
 		id_detalle_deportiva INT IDENTITY(1,1) PRIMARY KEY,
 		id_inscripcion_dep INT NOT NULL,
-		id_factura INT NOT NULL,
+		id_membresia INT NOT NULL,
 		monto DECIMAL(10,2) NOT NULL,
-		CONSTRAINT fk_DetalleDeportiva_id_inscripcion_dep FOREIGN KEY (id_inscripcion_dep) REFERENCES socios.InscripcionActividadDeportiva(id_inscripcion_dep),
-		CONSTRAINT fk_DetalleDeportiva_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura(id_factura)
+		CONSTRAINT fk_DetalleDeportiva_id_inscripcion_dep FOREIGN KEY (id_inscripcion_dep) REFERENCES socios.InscripcionActividadDeportiva (id_inscripcion_dep),
+		CONSTRAINT fk_DetalleDeportiva_id_factura FOREIGN KEY (id_membresia) REFERENCES socios.Membresia (id_membresia)
 	);
 END
 ELSE
