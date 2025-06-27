@@ -205,6 +205,7 @@ BEGIN
 		id_socio INT NOT NULL,
 		fecha_inscripcion DATE NOT NULL,
 		fecha_baja DATE NULL,
+		modalidad VARCHAR(10) NOT NULL,
 		CONSTRAINT fk_InscripcionActividadRecreativa_id_actividad_rec FOREIGN KEY (id_actividad_rec) REFERENCES socios.ActividadRecreativa(id_actividad_rec),
 		CONSTRAINT fk_InscripcionActividadRecreativa_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio(id_socio)
 	);
@@ -260,6 +261,22 @@ ELSE
 	PRINT 'Ya existe la tabla [socios].[Factura]';
 GO
 
+IF OBJECT_ID(N'[socios].[Membresia]', N'U') IS NULL
+BEGIN
+	CREATE TABLE socios.Membresia (
+		id_membresia INT IDENTITY(1,1) PRIMARY KEY,
+		id_socio int NOT NULL,
+		id_factura INT NOT NULL,
+		total_bruto DECIMAL(10,2) NOT NULL,
+		total_neto DECIMAL(10,2) NOT NULL,
+		CONSTRAINT fk_Membresia_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio (id_socio),
+		CONSTRAINT fk_Factura_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura (id_factura)
+	);
+END
+ELSE
+	PRINT 'Ya existe la tabla [socios].[Factura]';
+GO
+
 IF OBJECT_ID(N'[socios].[FacturaResponsable]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.FacturaResponsable (
@@ -272,21 +289,6 @@ BEGIN
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[FacturaResponsable]';
-GO
-
-IF OBJECT_ID(N'[socios].[DetalleCuota]', N'U') IS NULL
-BEGIN
-	CREATE TABLE socios.DetalleCuota (
-		id_detalle_cuota INT IDENTITY(1,1) PRIMARY KEY,
-		id_socio INT NOT NULL,
-		id_factura INT NOT NULL,
-		monto DECIMAL(10,2) NOT NULL
-		CONSTRAINT fk_DetalleCuota_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio(id_socio),
-		CONSTRAINT fk_DetalleCuota_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura(id_factura)
-	);
-END
-ELSE
-	PRINT 'Ya existe la tabla [socios].[DetalleCuota]';
 GO
 
 IF OBJECT_ID(N'[socios].[DetalleInvitacion]', N'U') IS NULL
@@ -327,10 +329,10 @@ BEGIN
 	CREATE TABLE socios.DetalleDeportiva (
 		id_detalle_deportiva INT IDENTITY(1,1) PRIMARY KEY,
 		id_inscripcion_dep INT NOT NULL,
-		id_factura INT NOT NULL,
+		id_membresia INT NOT NULL,
 		monto DECIMAL(10,2) NOT NULL,
-		CONSTRAINT fk_DetalleDeportiva_id_inscripcion_dep FOREIGN KEY (id_inscripcion_dep) REFERENCES socios.InscripcionActividadDeportiva(id_inscripcion_dep),
-		CONSTRAINT fk_DetalleDeportiva_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura(id_factura)
+		CONSTRAINT fk_DetalleDeportiva_id_inscripcion_dep FOREIGN KEY (id_inscripcion_dep) REFERENCES socios.InscripcionActividadDeportiva (id_inscripcion_dep),
+		CONSTRAINT fk_DetalleDeportiva_id_factura FOREIGN KEY (id_membresia) REFERENCES socios.Membresia (id_membresia)
 	);
 END
 ELSE
