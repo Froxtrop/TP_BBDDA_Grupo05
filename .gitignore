@@ -1,3 +1,6 @@
 ### VS Code ###
 .vscode/
+
+### Archivos solución ###
+.vs/
 Grupo05/pruebas.sql
