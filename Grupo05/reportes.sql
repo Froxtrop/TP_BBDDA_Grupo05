@@ -88,7 +88,7 @@ Reporte que contenga a los socios que no han asistido a alguna clase de la activ
 realizan. El reporte debe contener: Nombre, Apellido, edad, categoría y la actividad
 */
 
-SELECT p.nombre, p.apellido, socios.edad(p.fecha_de_nacimiento) as edad,
+SELECT p.nombre, p.apellido, socios.fn_obtener_edad_por_fnac(p.fecha_de_nacimiento) as edad,
 	c.nombre as categoria, ad.nombre as actividad_deportiva,
 	COUNT(p.nombre) OVER (PARTITION BY s.id_socio) as ausencias
 FROM [socios].[InscripcionActividadDeportiva] i
