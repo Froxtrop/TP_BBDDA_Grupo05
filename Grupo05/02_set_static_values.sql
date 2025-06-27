@@ -44,11 +44,62 @@ INSERT INTO socios.ActividadRecreativa(nombre)
 VALUES ('Sum'),('Pileta'),('Colonia de verano')
 SELECT * FROM socios.ActividadRecreativa
 
--- Carga de datos en la tabla tarifa actividad recreativa
-INSERT INTO socios.TarifaActividadRecreativa(id_actividad_rec, vigente_desde, vigente_hasta, valor, modalidad, edad_maxima, invitado)
+-- Carga de tarifas en socios.TarifaActividadRecreativa
+INSERT INTO socios.TarifaActividadRecreativa
+(id_actividad_rec, vigente_desde, vigente_hasta, valor, modalidad, edad_maxima, invitado)
 VALUES
-(1, '2025-01-01', '2025-05-28', 25000),
-(2, '2025-01-01', '2025-05-28', 30000),
-(3, '2025-01-01', '2025-05-28', 25000),
-SELECT * FROM socios.TarifaActividadDeportiva
+-- Precios de Sum (id_actividad_rec 1) por Adultos, Menores, siendo socios o invitados, por día, mes y temporada
+-- Valor del día
+(1, '2025-01-01', '2025-02-28', 25000.00, 'Día', NULL, 0),         -- Socios Adultos
+(1, '2025-01-01', '2025-02-28', 15000.00, 'Día', 12, 0),           -- Socios Menores
+(1, '2025-01-01', '2025-02-28', 30000.00, 'Día', NULL, 1),         -- Invitados Adultos
+(1, '2025-01-01', '2025-02-28', 2000.00,  'Día', 12, 1),           -- Invitados Menores
+
+-- Valor de temporada
+(1, '2025-01-01', '2025-02-28', 2000000.00, 'Temporada', NULL, 0), -- Socios Adultos
+(1, '2025-01-01', '2025-02-28', 1200000.00, 'Temporada', 12, 0),   -- Socios Menores
+
+-- Valor del mes
+(1, '2025-01-01', '2025-02-28', 625000.00, 'Mes', NULL, 0),        -- Socios Adultos
+(1, '2025-01-01', '2025-02-28', 375000.00, 'Mes', 12, 0);          -- Socios Menores
+
+
+-- Precios de Pileta (id_actividad_rec 2) por Adultos, Menores, siendo socios o invitados, por día, mes y temporada
+INSERT INTO socios.TarifaActividadRecreativa
+(id_actividad_rec, vigente_desde, vigente_hasta, valor, modalidad, edad_maxima, invitado)
+VALUES
+-- Valor del día
+(2, '2025-01-01', '2025-02-28', 25000, 'Día', NULL, 0),           -- Socio adulto
+(2, '2025-01-01', '2025-02-28', 15000, 'Día', 11, 0),             -- Socio menor
+(2, '2025-01-01', '2025-02-28', 30000, 'Día', NULL, 1),           -- Invitado adulto
+(2, '2025-01-01', '2025-02-28',  2000, 'Día', 11, 1),             -- Invitado menor
+
+-- Valor de temporada
+(2, '2025-01-01', '2025-02-28', 2000000, 'Temporada', NULL, 0),   -- Socio adulto
+(2, '2025-01-01', '2025-02-28', 1200000, 'Temporada', 11, 0),     -- Socio menor
+
+-- Valor del mes
+(2, '2025-01-01', '2025-02-28', 625000, 'Mes', NULL, 0),          -- Socio adulto
+(2, '2025-01-01', '2025-02-28', 375000, 'Mes', 11, 0);            -- Socio menor
+
+
+-- Precios de Colonia de verano (id_actividad_rec 3) por Adultos, Menores, siendo socios o invitados, por día, mes y temporada
+INSERT INTO socios.TarifaActividadRecreativa
+(id_actividad_rec, vigente_desde, vigente_hasta, valor, modalidad, edad_maxima, invitado)
+VALUES
+-- Valor del día
+(3, '2025-01-01', '2025-02-28', 25000, 'Día', NULL, 0),				-- Socio adulto
+(3, '2025-01-01', '2025-02-28', 15000, 'Día', 11, 0),				-- Socio menor
+(3, '2025-01-01', '2025-02-28', 30000, 'Día', NULL, 1),				-- Invitado adulto
+(3, '2025-01-01', '2025-02-28',  2000, 'Día', 11, 1),				-- Invitado menor
+
+-- Valor de temporada
+(3, '2025-01-01', '2025-02-28', 2000000, 'Temporada', NULL, 0),		-- Socio adulto
+(3, '2025-01-01', '2025-02-28', 1200000, 'Temporada', 11, 0),		-- Socio menor
+
+-- Valor del mes
+(3, '2025-01-01', '2025-02-28', 625000, 'Mes', NULL, 0),			-- Socio adulto
+(3, '2025-01-01', '2025-02-28', 375000, 'Mes', 11, 0);				-- Socio menor
+
+SELECT * FROM socios.TarifaActividadRecreativa
 
