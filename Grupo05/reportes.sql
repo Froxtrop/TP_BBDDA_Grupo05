@@ -1,7 +1,7 @@
 /***********************************************************************
- * Enunciado: Entrega 6 reportes solicitados.
+ * Enunciado: Entrega 6, reportes solicitados.
  *
- * Fecha de entrega: 24/06/2025
+ * Fecha de entrega: 01/07/2025
  *
  * Número de comisión: 2900
  * Número de grupo: 05
@@ -39,32 +39,33 @@ Descripción: Reporte 1
 	- Mes incumplido
 	Ordenados de Mayor a menor por ranking de morosidad
 Autor: Grupo 05 - Com2900
--- Rehacer este con socio.
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE reportes.reporte1
-@fecha_desde DATE, --GETDATE() - 365
-@fecha_hasta DATE --GETDATE()
+@fecha_desde DATE,
+@fecha_hasta DATE
 AS
 BEGIN
     SET NOCOUNT ON;
 
-	IF @fecha_desde < @fecha_hasta
-	BEGIN
-        RAISERROR('La fecha_desde no puede ser inferior a la fecha_hasta.', 16, 1);
+	IF @fecha_desde > @fecha_hasta
+	BEGIN;
+        RAISERROR('La fecha_desde no puede ser mayor a la fecha_hasta.', 16, 1);
         RETURN;
-    END
+    END;
 
 	WITH MorososRecurrentes AS (
-		 SELECT p.id_persona, p.nombre, p.apellido, MONTH(f.fecha_emision) as mes_incumplido,
+		 SELECT s.id_socio, p.nombre, p.apellido, MONTH(f.fecha_emision) as mes_incumplido,
 			COUNT(nombre) OVER (PARTITION BY nombre, apellido) as recurrencias
 		 FROM [socios].[Morosidad] m
 			INNER JOIN [socios].[Factura] f ON m.id_factura = f.id_factura
-			INNER JOIN [socios].[Persona] p ON m.id_persona = p.id_persona
+			INNER JOIN [socios].[Socio] s ON m.id_socio = s.id_socio
+			INNER JOIN [socios].[Persona] p ON p.id_persona = s.id_persona
 			WHERE f.fecha_emision BETWEEN @fecha_desde AND @fecha_hasta
 	)
-	SELECT id_persona, nombre, apellido, mes_incumplido,
+	SELECT id_socio, nombre, apellido, mes_incumplido,
 		RANK() OVER (PARTITION BY nombre, apellido ORDER BY recurrencias DESC) as ranking_morosidad
 	FROM MorososRecurrentes
+	WHERE recurrencias > 2 -- Deben haber incumplido en más de 2 oportunidades
 	ORDER BY ranking_morosidad;
 END
 GO
@@ -88,11 +89,12 @@ BEGIN
 		ad.nombre as actividad_deportiva,
 		SUM(dd.monto) OVER (PARTITION BY MONTH(f.fecha_emision), ad.nombre) as valor_acumulado
 		FROM socios.DetalleDeportiva dd
-		INNER JOIN socios.Factura f ON f.id_factura = dd.id_factura
-		INNER JOIN socios.DetalleDePago ddp ON ddp.id_factura = dd.id_factura -- Si se cumple este inner join es que está pago
+		INNER JOIN socios.Membresia m ON m.id_membresia = dd.id_membresia
+		INNER JOIN socios.Factura f ON f.id_factura = dd.id_membresia
+		INNER JOIN socios.DetalleDePago ddp ON ddp.id_factura = f.id_factura -- Si se cumple este inner join es que está pago
 		INNER JOIN socios.InscripcionActividadDeportiva iad ON iad.id_inscripcion_dep = dd.id_inscripcion_dep
 		INNER JOIN socios.ActividadDeportiva ad ON ad.id_actividad_dep = iad.id_actividad_dep
-		WHERE f.fecha_emision <= @fecha_actual AND f.fecha_emision >= @fecha_inicial
+		WHERE f.fecha_emision <= @fecha_actual AND f.fecha_emision >= @fecha_inicial;
 END
 GO
 
@@ -109,12 +111,13 @@ CREATE OR ALTER PROCEDURE reportes.reporte3
 AS
 BEGIN
     SET NOCOUNT ON;
+
 	WITH AsistenciaAlternada AS (
 		SELECT DISTINCT asis.id_socio, asis.id_actividad_dep
 		FROM [socios].[AsistenciaActividadDeportiva] asis
 		GROUP BY asis.id_socio, asis.id_actividad_dep
 		HAVING SUM(CASE WHEN asis.asistencia = 'P' THEN 1 ELSE 0 END) > 0 -- asistencias
-		AND SUM(CASE WHEN asis.asistencia = 'A' THEN 1 ELSE 0 END) > 0 -- inasistencias
+		AND SUM(CASE WHEN asis.asistencia = 'A' OR asis.asistencia = 'J' THEN 1 ELSE 0 END) > 0 -- inasistencias
 	)
 	SELECT c.nombre as categoria, ad.nombre as actividad_deportiva,
 		COUNT(s.id_socio) OVER (PARTITION BY c.id_categoria, ad.id_actividad_dep)
@@ -123,7 +126,7 @@ BEGIN
 		INNER JOIN [socios].[ActividadDeportiva] ad ON asis.id_actividad_dep = ad.id_actividad_dep
 		INNER JOIN [socios].[Socio] s ON asis.id_socio = s.id_socio
 		INNER JOIN [socios].[Categoria] c ON c.id_categoria = s.id_categoria
-		ORDER BY categoria ASC, actividad_deportiva ASC, cantidad_socios_asistencia_alternada DESC
+		ORDER BY categoria ASC, actividad_deportiva ASC, cantidad_socios_asistencia_alternada DESC;
 END
 GO
 
@@ -139,6 +142,7 @@ CREATE OR ALTER PROCEDURE reportes.reporte4
 AS
 BEGIN
     SET NOCOUNT ON;
+
 	SELECT p.nombre, p.apellido, socios.fn_obtener_edad_por_fnac(p.fecha_de_nacimiento) as edad,
 		c.nombre as categoria, ad.nombre as actividad_deportiva,
 		COUNT(p.nombre) OVER (PARTITION BY s.id_socio) as ausencias
@@ -150,6 +154,6 @@ BEGIN
 		INNER JOIN [socios].[Persona] p ON s.id_persona = p.id_persona
 		INNER JOIN [socios].[Categoria] c ON c.id_categoria = s.id_categoria
 		WHERE i.fecha_baja IS NULL
-			AND asis.asistencia = 'A' -- ausente
+			AND (asis.asistencia = 'A' OR asis.asistencia = 'J'); -- ausente o ausente justificado
 END
 GO
