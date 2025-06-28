@@ -8,7 +8,7 @@ GO
  *		el script completo de creación (debe funcionar si se lo ejecuta
  *		“tal cual” es entregado en una sola ejecución).
  *
- * Fecha de entrega: 24/06/2025
+ * Fecha de entrega: 01/07/2025
  *
  * Número de comisión: 2900
  * Número de grupo: 05
@@ -72,12 +72,24 @@ BEGIN
 		fecha_hasta DATE NOT NULL,
 		CONSTRAINT fk_persona_menor FOREIGN KEY (id_persona) REFERENCES socios.Persona(id_persona),
 		CONSTRAINT fk_persona_responsable FOREIGN KEY (id_persona_responsable) REFERENCES socios.Persona(id_persona),
-		CONSTRAINT ck_parentesco CHECK (parentesco IN ('P', 'M', 'T'))
+		CONSTRAINT ck_parentesco CHECK (parentesco IN ('P', 'M', 'T')) -- Padre / Madre / Tutor
 	);
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[Parentesco]';
 GO
+-- Índices Parentesco
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Parentesco_id_persona' AND object_id = OBJECT_ID(N'[socios].[Parentesco]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Parentesco_id_persona ON socios.Parentesco(id_persona);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Parentesco_id_persona_responsable' AND object_id = OBJECT_ID(N'[socios].[Parentesco]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Parentesco_id_persona_responsable ON socios.Parentesco(id_persona_responsable);
+END;
+GO
+
 
 IF OBJECT_ID(N'[socios].[Categoria]', N'U') IS NULL
 BEGIN
@@ -106,6 +118,12 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[TarifaCategoria]';
 GO
+-- Índices TarifaCategoria
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_TarifaCategoria_id_categoria' AND object_id = OBJECT_ID(N'[socios].[TarifaCategoria]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_TarifaCategoria_id_categoria ON socios.TarifaCategoria(id_categoria);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[Socio]', N'U') IS NULL
 BEGIN
@@ -124,6 +142,17 @@ BEGIN
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[Socio]';
+GO
+-- Índices Socio
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Socio_id_persona' AND object_id = OBJECT_ID(N'[socios].[Socio]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Socio_id_persona ON socios.Socio(id_persona);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Socio_id_categoria' AND object_id = OBJECT_ID(N'[socios].[Socio]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Socio_id_categoria ON socios.Socio(id_categoria);
+END;
 GO
 
 IF OBJECT_ID(N'[socios].[ActividadDeportiva]', N'U') IS NULL
@@ -162,6 +191,12 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[TarifaActividadDeportiva]';
 GO
+-- Índices TarifaActividadDeportiva
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_TarifaActividadDeportiva_id_actividad_dep' AND object_id = OBJECT_ID(N'[socios].[TarifaActividadDeportiva]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_TarifaActividadDeportiva_id_actividad_dep ON socios.TarifaActividadDeportiva(id_actividad_dep);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[TarifaActividadRecreativa]', N'U') IS NULL
 BEGIN
@@ -180,6 +215,12 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[TarifaActividadRecreativa]';
 GO
+-- Índices TarifaActividadRecreativa
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_TarifaActividadRecreativa_id_actividad_rec' AND object_id = OBJECT_ID(N'[socios].[TarifaActividadRecreativa]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_TarifaActividadRecreativa_id_actividad_rec ON socios.TarifaActividadRecreativa(id_actividad_rec);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[InscripcionActividadDeportiva]', N'U') IS NULL
 BEGIN
@@ -195,6 +236,17 @@ BEGIN
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[InscripcionActividadDeportiva]';
+GO
+-- Índices InscripcionActividadDeportiva
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_InscripcionActividadDeportiva_id_actividad_dep' AND object_id = OBJECT_ID(N'[socios].[InscripcionActividadDeportiva]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_InscripcionActividadDeportiva_id_actividad_dep ON socios.InscripcionActividadDeportiva(id_actividad_dep);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_InscripcionActividadDeportiva_id_socio' AND object_id = OBJECT_ID(N'[socios].[InscripcionActividadDeportiva]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_InscripcionActividadDeportiva_id_socio ON socios.InscripcionActividadDeportiva(id_socio);
+END;
 GO
 
 IF OBJECT_ID(N'[socios].[InscripcionActividadRecreativa]', N'U') IS NULL
@@ -212,6 +264,17 @@ BEGIN
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[InscripcionActividadRecreativa]';
+GO
+-- Índices InscripcionActividadRecreativa
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_InscripcionActividadRecreativa_id_actividad_rec' AND object_id = OBJECT_ID(N'[socios].[InscripcionActividadRecreativa]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_InscripcionActividadRecreativa_id_actividad_rec ON socios.InscripcionActividadRecreativa(id_actividad_rec);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_InscripcionActividadRecreativa_id_socio' AND object_id = OBJECT_ID(N'[socios].[InscripcionActividadRecreativa]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_InscripcionActividadRecreativa_id_socio ON socios.InscripcionActividadRecreativa(id_socio);
+END;
 GO
 
 IF OBJECT_ID(N'[socios].[AsistenciaActividadDeportiva]', N'U') IS NULL
@@ -231,6 +294,17 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[AsistenciaActividadDeportiva]';
 GO
+-- Índices AsistenciaActividadDeportiva
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_AsistenciaActividadDeportiva_id_socio' AND object_id = OBJECT_ID(N'[socios].[AsistenciaActividadDeportiva]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_AsistenciaActividadDeportiva_id_socio ON socios.AsistenciaActividadDeportiva(id_socio);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_AsistenciaActividadDeportiva_id_actividad_dep' AND object_id = OBJECT_ID(N'[socios].[AsistenciaActividadDeportiva]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_AsistenciaActividadDeportiva_id_actividad_dep ON socios.AsistenciaActividadDeportiva(id_actividad_dep);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[AsistenciaActividadRecreativa]', N'U') IS NULL
 BEGIN
@@ -245,6 +319,17 @@ BEGIN
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[AsistenciaActividadRecreativa]';
+GO
+-- Índices AsistenciaActividadRecreativa
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_AsistenciaActividadRecreativa_id_socio' AND object_id = OBJECT_ID(N'[socios].[AsistenciaActividadRecreativa]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_AsistenciaActividadRecreativa_id_socio ON socios.AsistenciaActividadRecreativa(id_socio);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_AsistenciaActividadRecreativa_id_actividad_rec' AND object_id = OBJECT_ID(N'[socios].[AsistenciaActividadRecreativa]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_AsistenciaActividadRecreativa_id_actividad_rec ON socios.AsistenciaActividadRecreativa(id_actividad_rec);
+END;
 GO
 
 IF OBJECT_ID(N'[socios].[Factura]', N'U') IS NULL
@@ -270,11 +355,22 @@ BEGIN
 		total_bruto DECIMAL(10,2) NOT NULL,
 		total_neto DECIMAL(10,2) NOT NULL,
 		CONSTRAINT fk_Membresia_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio (id_socio),
-		CONSTRAINT fk_Factura_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura (id_factura)
+		CONSTRAINT fk_Membresia_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura (id_factura)
 	);
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[Membresia]';
+GO
+-- Índices Membresia
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Membresia_id_socio' AND object_id = OBJECT_ID(N'[socios].[Membresia]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Membresia_id_socio ON socios.Membresia(id_socio);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Membresia_id_factura' AND object_id = OBJECT_ID(N'[socios].[Membresia]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Membresia_id_factura ON socios.Membresia(id_factura);
+END;
 GO
 
 IF OBJECT_ID(N'[socios].[FacturaResponsable]', N'U') IS NULL
@@ -308,6 +404,22 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[DetalleInvitacion]';
 GO
+-- Índices DetalleInvitacion
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleInvitacion_id_inscripcion_rec' AND object_id = OBJECT_ID(N'[socios].[DetalleInvitacion]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleInvitacion_id_inscripcion_rec ON socios.DetalleInvitacion(id_inscripcion_rec);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleInvitacion_id_persona_invitada' AND object_id = OBJECT_ID(N'[socios].[DetalleInvitacion]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleInvitacion_id_persona_invitada ON socios.DetalleInvitacion(id_persona_invitada);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleInvitacion_id_factura' AND object_id = OBJECT_ID(N'[socios].[DetalleInvitacion]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleInvitacion_id_factura ON socios.DetalleInvitacion(id_factura);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[DetalleRecreativa]', N'U') IS NULL
 BEGIN
@@ -323,6 +435,17 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[DetalleRecreativa]';
 GO
+-- Índices DetalleRecreativa
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleRecreativa_id_inscripcion_rec' AND object_id = OBJECT_ID(N'[socios].[DetalleRecreativa]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleRecreativa_id_inscripcion_rec ON socios.DetalleRecreativa(id_inscripcion_rec);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleRecreativa_id_factura' AND object_id = OBJECT_ID(N'[socios].[DetalleRecreativa]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleRecreativa_id_factura ON socios.DetalleRecreativa(id_factura);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[DetalleDeportiva]', N'U') IS NULL
 BEGIN
@@ -332,11 +455,22 @@ BEGIN
 		id_membresia INT NOT NULL,
 		monto DECIMAL(10,2) NOT NULL,
 		CONSTRAINT fk_DetalleDeportiva_id_inscripcion_dep FOREIGN KEY (id_inscripcion_dep) REFERENCES socios.InscripcionActividadDeportiva (id_inscripcion_dep),
-		CONSTRAINT fk_DetalleDeportiva_id_factura FOREIGN KEY (id_membresia) REFERENCES socios.Membresia (id_membresia)
+		CONSTRAINT fk_DetalleDeportiva_id_membresia FOREIGN KEY (id_membresia) REFERENCES socios.Membresia (id_membresia)
 	);
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[DetalleDeportiva]';
+GO
+-- Índices DetalleDeportiva
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleDeportiva_id_inscripcion_dep' AND object_id = OBJECT_ID(N'[socios].[DetalleDeportiva]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleDeportiva_id_inscripcion_dep ON socios.DetalleDeportiva(id_inscripcion_dep);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleDeportiva_id_membresia' AND object_id = OBJECT_ID(N'[socios].[DetalleDeportiva]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleDeportiva_id_membresia ON socios.DetalleDeportiva(id_membresia);
+END;
 GO
 
 IF OBJECT_ID(N'[socios].[MedioDePago]', N'U') IS NULL
@@ -366,6 +500,17 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[Pago]';
 GO
+-- Índices Pago
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Pago_id_factura' AND object_id = OBJECT_ID(N'[socios].[Pago]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Pago_id_factura ON socios.Pago(id_factura);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Pago_id_medio' AND object_id = OBJECT_ID(N'[socios].[Pago]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Pago_id_medio ON socios.Pago(id_medio);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[DetalleDePago]', N'U') IS NULL
 BEGIN
@@ -380,6 +525,17 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[DetalleDePago]';
 GO
+-- Índices DetalleDePago
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleDePago_id_factura' AND object_id = OBJECT_ID(N'[socios].[DetalleDePago]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleDePago_id_factura ON socios.DetalleDePago(id_factura);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_DetalleDePago_id_pago' AND object_id = OBJECT_ID(N'[socios].[DetalleDePago]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_DetalleDePago_id_pago ON socios.DetalleDePago(id_pago);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[NotaDeCredito]', N'U') IS NULL
 BEGIN
@@ -393,6 +549,12 @@ BEGIN
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[NotaDeCredito]';
+GO
+-- Índices NotaDeCredito
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_NotaDeCredito_id_pago' AND object_id = OBJECT_ID(N'[socios].[NotaDeCredito]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_NotaDeCredito_id_pago ON socios.NotaDeCredito(id_pago);
+END;
 GO
 
 IF OBJECT_ID(N'[socios].[PagoACuenta]', N'U') IS NULL
@@ -410,6 +572,17 @@ END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[PagoACuenta]';
 GO
+-- Índices PagoACuenta
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_PagoACuenta_id_persona' AND object_id = OBJECT_ID(N'[socios].[PagoACuenta]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_PagoACuenta_id_persona ON socios.PagoACuenta(id_persona);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_PagoACuenta_id_pago' AND object_id = OBJECT_ID(N'[socios].[PagoACuenta]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_PagoACuenta_id_pago ON socios.PagoACuenta(id_pago);
+END;
+GO
 
 IF OBJECT_ID(N'[socios].[Morosidad]', N'U') IS NULL
 BEGIN
@@ -424,4 +597,15 @@ BEGIN
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[Morosidad]';
+GO
+-- Índices Morosidad
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Morosidad_id_socio' AND object_id = OBJECT_ID(N'[socios].[Morosidad]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Morosidad_id_socio ON socios.Morosidad(id_socio);
+END;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Morosidad_id_factura' AND object_id = OBJECT_ID(N'[socios].[Morosidad]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Morosidad_id_factura ON socios.Morosidad(id_factura);
+END;
 GO
