@@ -274,7 +274,7 @@ BEGIN
 	);
 END
 ELSE
-	PRINT 'Ya existe la tabla [socios].[Factura]';
+	PRINT 'Ya existe la tabla [socios].[Membresia]';
 GO
 
 IF OBJECT_ID(N'[socios].[FacturaResponsable]', N'U') IS NULL
@@ -415,10 +415,10 @@ IF OBJECT_ID(N'[socios].[Morosidad]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.Morosidad (
 		id_morosidad INT IDENTITY(1,1) PRIMARY KEY,
-		id_persona INT NOT NULL,
+		id_socio INT NOT NULL,
 		id_factura INT NOT NULL,
 		monto DECIMAL(10,2) NOT NULL,
-		CONSTRAINT fk_Morosidad_id_persona FOREIGN KEY (id_persona) REFERENCES socios.Persona(id_persona),
+		CONSTRAINT fk_Morosidad_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio(id_socio),
 		CONSTRAINT fk_Morosidad_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura(id_factura)
 	);
 END
