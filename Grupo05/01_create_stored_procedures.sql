@@ -61,7 +61,14 @@ BEGIN
 END
 GO
 
--- ================================================================================================
+/*		 ____  _____ ____  ____   ___  _   _    _    
+		|  _ \| ____|  _ \/ ___| / _ \| \ | |  / \   
+		| |_) |  _| | |_) \___ \| | | |  \| | / ^ \  
+		|  __/| |___|  _ < ___) | |_| | |\  |/ ___ \ 
+		|_|   |_____|_| \_\____/ \___/|_| \_/_/   \_\
+*/
+USE Com2900G05;
+GO
 
 /***********************************************************************
 Nombre del procedimiento: socios.registrar_persona_sp
@@ -85,28 +92,28 @@ BEGIN
     -- Validación: DNI único
     IF EXISTS (SELECT 1 FROM socios.Persona WHERE dni = @dni)
     BEGIN
-        RAISERROR('Ya existe una persona con ese DNI.', 16, 1);
+        RAISERROR('[Error] socios.registrar_persona_sp: Ya existe una persona con ese DNI.', 16, 1);
         RETURN;
     END
 
     -- Validación: Fecha de nacimiento no futura
     IF @fecha_de_nacimiento > CAST(GETDATE() AS DATE)
     BEGIN
-        RAISERROR('La fecha de nacimiento no puede ser futura.', 16, 1);
+        RAISERROR('[Error] socios.registrar_persona_sp: La fecha de nacimiento no puede ser futura.', 16, 1);
         RETURN;
     END
 
     -- Validación: Email básico
     IF @email IS NOT NULL AND @email NOT LIKE '%@%.%'
     BEGIN
-        RAISERROR('El email ingresado no es válido.', 16, 1);
+        RAISERROR('[Error] socios.registrar_persona_sp: El email ingresado no es válido.', 16, 1);
         RETURN;
     END
 
     -- Validación: Saldo no negativo
     IF @saldo < 0
     BEGIN
-        RAISERROR('El saldo no puede ser negativo.', 16, 1);
+        RAISERROR('[Error] socios.registrar_persona_sp: El saldo no puede ser negativo.', 16, 1);
         RETURN;
     END
 
@@ -121,13 +128,6 @@ BEGIN
     SET @id_persona = SCOPE_IDENTITY();
 END
 GO
-
-/*		 ____  _____ ____  ____   ___  _   _    _    
-		|  _ \| ____|  _ \/ ___| / _ \| \ | |  / \   
-		| |_) |  _| | |_) \___ \| | | |  \| | / ^ \  
-		|  __/| |___|  _ < ___) | |_| | |\  |/ ___ \ 
-		|_|   |_____|_| \_\____/ \___/|_| \_/_/   \_\
-*/
 
 /***********************************************************************
 Nombre del procedimiento: socios.actualizar_persona_sp
@@ -150,35 +150,35 @@ BEGIN
     -- Validar existencia de la persona
     IF NOT EXISTS (SELECT 1 FROM socios.Persona WHERE id_persona = @id_persona)
     BEGIN
-        RAISERROR('La persona indicada no existe.', 16, 1);
+        RAISERROR('[Error] socios.actualizar_persona_sp: La persona indicada no existe.', 16, 1);
         RETURN;
     END
 
     -- Validación: DNI único (excluyendo el propio registro)
     IF EXISTS (SELECT 1 FROM socios.Persona WHERE dni = @dni AND id_persona <> @id_persona)
     BEGIN
-        RAISERROR('Otro registro ya tiene ese DNI.', 16, 1);
+        RAISERROR('[Error] socios.actualizar_persona_sp: Otro registro ya tiene ese DNI.', 16, 1);
         RETURN;
     END
 
     -- Validación: Fecha de nacimiento no futura
     IF @fecha_de_nacimiento > CAST(GETDATE() AS DATE)
     BEGIN
-        RAISERROR('La fecha de nacimiento no puede ser futura.', 16, 1);
+        RAISERROR('[Error] socios.actualizar_persona_sp: La fecha de nacimiento no puede ser futura.', 16, 1);
         RETURN;
     END
 
     -- Validación: Email básico
     IF @email IS NOT NULL AND @email NOT LIKE '%@%.%'
     BEGIN
-        RAISERROR('El email ingresado no es válido.', 16, 1);
+        RAISERROR('[Error] socios.actualizar_persona_sp: El email ingresado no es válido.', 16, 1);
         RETURN;
     END
 
     -- Validación: Saldo no negativo
     IF @saldo < 0
     BEGIN
-        RAISERROR('El saldo no puede ser negativo.', 16, 1);
+        RAISERROR('[Error] socios.actualizar_persona_sp: El saldo no puede ser negativo.', 16, 1);
         RETURN;
     END
 
@@ -208,10 +208,11 @@ BEGIN
     SET NOCOUNT ON;
 
     -- Intento de eliminación bloqueado
-    RAISERROR('No se puede eliminar una persona del sistema.', 16, 1);
+    RAISERROR('[Error] socios.eliminar_persona_sp: No se puede eliminar una persona del sistema.', 16, 1);
     RETURN;
 END
 GO
+
 
 /*       		 ____   ___   ____ ___ ___  
 				/ ___| / _ \ / ___|_ _/ _ \ 
@@ -219,6 +220,8 @@ GO
 				 ___) | |_| | |___ | | |_| |
 				|____/ \___/ \____|___\___/ 
 */
+USE Com2900G05;
+GO
 
 /***********************************************************************
 Nombre del procedimiento: socios.registrar_socio_sp
@@ -240,21 +243,21 @@ BEGIN
     -- Validación: Persona existe
     IF NOT EXISTS (SELECT 1 FROM socios.Persona WHERE id_persona = @id_persona)
     BEGIN
-        RAISERROR('La persona indicada no existe en el sistema.', 16, 1);
+        RAISERROR('[Error] socios.registrar_socio_sp: La persona indicada no existe en el sistema.', 16, 1);
         RETURN;
     END
 
     -- Validación: No duplicar socio para misma persona
     IF EXISTS (SELECT 1 FROM socios.Socio WHERE id_persona = @id_persona AND activo = 1)
     BEGIN
-        RAISERROR('La persona ya es un socio activo.', 16, 1);
+        RAISERROR('[Error] socios.registrar_socio_sp: La persona ya es un socio activo.', 16, 1);
         RETURN;
     END
 
     -- Validación: Categoría válida
     IF NOT EXISTS (SELECT 1 FROM socios.Categoria WHERE id_categoria = @id_categoria)
     BEGIN
-        RAISERROR('Categoría no válida.', 16, 1);
+        RAISERROR('[Error] socios.registrar_socio_sp: Categoría no válida.', 16, 1);
         RETURN;
     END
 
@@ -299,14 +302,14 @@ BEGIN
     -- Validación: Socio existe y está activo
     IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio AND activo = 1)
     BEGIN
-        RAISERROR('El socio indicado no existe o no está activo.', 16, 1);
+        RAISERROR('[Error] socios.actualizar_socio_sp: El socio indicado no existe o no está activo.', 16, 1);
         RETURN;
     END
 
     -- Validación: Categoría válida
     IF NOT EXISTS (SELECT 1 FROM socios.Categoria WHERE id_categoria = @id_categoria)
     BEGIN
-        RAISERROR('Categoría no válida.', 16, 1);
+        RAISERROR('[Error] socios.actualizar_socio_sp: Categoría no válida.', 16, 1);
         RETURN;
     END
 
@@ -335,7 +338,7 @@ BEGIN
     -- Validación: Socio existe y está activo
     IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio AND activo = 1)
     BEGIN
-        RAISERROR('El socio indicado no existe o ya está desactivado.', 16, 1);
+        RAISERROR('[Error] socios.eliminar_socio_sp: El socio indicado no existe o ya está desactivado.', 16, 1);
         RETURN;
     END
 
@@ -354,6 +357,8 @@ GO
 	|___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| |___/\___/ \___|_|\___/ 
                           |_|                                                
 */
+USE Com2900G05;
+GO
 
 /***********************************************************************
 Nombre del procedimiento: socios.inscripcion_socio_sp
@@ -442,7 +447,7 @@ BEGIN
 
     IF @id_socio IS NULL
     BEGIN
-        RAISERROR('No se encontró un socio activo para esta persona.', 16, 1);
+        RAISERROR('[Error] socios.actualizar_inscripcion_socio_sp: No se encontró un socio activo para esta persona.', 16, 1);
         RETURN;
     END
 
@@ -478,7 +483,7 @@ BEGIN
 
     IF @id_socio IS NULL
     BEGIN
-        RAISERROR('No se encontró un socio activo para esta persona.', 16, 1);
+        RAISERROR('[Error] socios.baja_inscripcion_socio_sp: No se encontró un socio activo para esta persona.', 16, 1);
         RETURN;
     END
 
@@ -488,12 +493,26 @@ END;
 GO
 
 
+/*
+		 ___                     _            _                              _       
+		|_ _|_ __  ___  ___ _ __(_)_ __   ___(_) ___  _ __    ___  ___   ___(_) ___  
+		 | || '_ \/ __|/ __| '__| | '_ \ / __| |/ _ \| '_ \  / __|/ _ \ / __| |/ _ \ 
+		 | || | | \__ \ (__| |  | | |_) | (__| | (_) | | | | \__ \ (_) | (__| | (_) |
+		|___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| |___/\___/ \___|_|\___/ 
+		 _ __ ___   ___ _ __   ___|_| __                                             
+		| '_ ` _ \ / _ \ '_ \ / _ \| '__|                                            
+		| | | | | |  __/ | | | (_) | |                                               
+		|_| |_| |_|\___|_| |_|\___/|_|                                               
+*/
+USE Com2900G05;
+GO
+
 /***********************************************************************
 Nombre del procedimiento: inscripcion_socio_menor_sp
 Descripción: Registra a un menor como socio y crea el vínculo con su responsable.
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
-CREATE OR ALTER PROCEDURE socios.inscripcion_socio_menor_sp
+CREATE OR ALTER PROCEDURE socios.registrar_inscripcion_menor_sp
     -- Datos del menor
     @nombre_menor VARCHAR(50),
     @apellido_menor VARCHAR(50),
@@ -513,88 +532,155 @@ CREATE OR ALTER PROCEDURE socios.inscripcion_socio_menor_sp
     @fecha_nac_resp DATE,
     @telefono_resp VARCHAR(50) = NULL,
 
+    -- Output
+    @id_persona_menor INT OUTPUT,
+    @id_socio_menor INT OUTPUT,
+    @id_persona_resp INT OUTPUT,
+
     -- Parentesco
     @parentesco CHAR(1)  -- 'P', 'M' o 'T'
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validación del parentesco
+    -- Validar parentesco
     IF @parentesco NOT IN ('P','M','T')
     BEGIN
-        RAISERROR('Parentesco inválido. Debe ser P, M o T.', 16, 1);
+        RAISERROR('[Error] socios.registrar_inscripcion_menor_sp: Parentesco inválido.', 16, 1);
         RETURN;
     END
 
-    -- Validación: menor de edad
-    DECLARE @edad_menor INT = DATEDIFF(YEAR, @fecha_nac_menor, GETDATE());
-    IF (MONTH(@fecha_nac_menor) > MONTH(GETDATE())) OR 
-       (MONTH(@fecha_nac_menor) = MONTH(GETDATE()) AND DAY(@fecha_nac_menor) > DAY(GETDATE()))
-    BEGIN
-        SET @edad_menor = @edad_menor - 1;
-    END
+    -- Validar edad del menor
+    DECLARE @edad_menor INT = socios.fn_obtener_edad_por_fnac(@fecha_nac_menor);
 
     IF @edad_menor >= 18
     BEGIN
-        RAISERROR('La persona ingresada no es menor de edad.', 16, 1);
+        RAISERROR('[Error] socios.registrar_inscripcion_menor_sp: La persona ingresada no es menor de edad.', 16, 1);
         RETURN;
     END
 
-    DECLARE @id_persona_menor INT;
-    DECLARE @id_socio_menor INT;
-    DECLARE @id_persona_resp INT;
     DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad_menor);
 
-    -- Registrar menor como persona
+    -- Registrar menor
     EXEC socios.registrar_persona_sp
-        @nombre = @nombre_menor,
-        @apellido = @apellido_menor,
-        @dni = @dni_menor,
-        @email = @email_menor,
-        @fecha_de_nacimiento = @fecha_nac_menor,
-        @telefono = @telefono_menor,
-        @saldo = 0,
-        @id_persona = @id_persona_menor OUTPUT;
+        @nombre_menor, @apellido_menor, @dni_menor, @email_menor, @fecha_nac_menor, @telefono_menor, 0, @id_persona_menor OUTPUT;
 
     IF @id_persona_menor IS NULL RETURN;
-	
-    -- Hacer socio al menor
+
     EXEC socios.registrar_socio_sp
-        @id_persona = @id_persona_menor,
-        @obra_social = @obra_social,
-        @nro_obra_social = @nro_obra_social,
-        @telefono_emergencia = @telefono_emergencia,
-		@id_categoria = @id_categoria,
-        @id_socio = @id_socio_menor OUTPUT;
+        @id_persona_menor, @id_categoria, @obra_social, @nro_obra_social, @telefono_emergencia, @id_socio_menor OUTPUT;
 
     IF @id_socio_menor IS NULL RETURN;
 
-    -- Registrar responsable (como persona común)
+    -- Registrar responsable
     EXEC socios.registrar_persona_sp
-        @nombre = @nombre_resp,
-        @apellido = @apellido_resp,
-        @dni = @dni_resp,
-        @email = @email_resp,
-        @fecha_de_nacimiento = @fecha_nac_resp,
-        @telefono = @telefono_resp,
-        @saldo = 0,
-        @id_persona = @id_persona_resp OUTPUT;
+        @nombre_resp, @apellido_resp, @dni_resp, @email_resp, @fecha_nac_resp, @telefono_resp, 0, @id_persona_resp OUTPUT;
 
     IF @id_persona_resp IS NULL RETURN;
 
-    -- Crear vínculo en Parentesco
-    INSERT INTO socios.Parentesco (
-        id_persona, id_persona_responsable, parentesco, fecha_desde, fecha_hasta
-    ) VALUES (
-        @id_persona_menor, @id_persona_resp, @parentesco, GETDATE(), DATEADD(YEAR, 18, @fecha_nac_menor)
-    );
-
-    -- Devolver resultados
-    SELECT 
-        @id_persona_menor AS id_persona_menor,
-        @id_socio_menor AS id_socio_menor,
-        @id_persona_resp AS id_responsable;
+    INSERT INTO socios.Parentesco (id_persona, id_persona_responsable, parentesco, fecha_desde, fecha_hasta)
+    VALUES (@id_persona_menor, @id_persona_resp, @parentesco, GETDATE(), DATEADD(YEAR, 18, @fecha_nac_menor));
 END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.actualizar_inscripcion_menor_sp
+Descripción: Actualiza datos de menor y responsable.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.actualizar_inscripcion_menor_sp
+    @id_persona_menor INT,
+    @nombre_menor VARCHAR(50),
+    @apellido_menor VARCHAR(50),
+    @dni_menor INT,
+    @email_menor VARCHAR(255) = NULL,
+    @fecha_nac_menor DATE,
+    @telefono_menor VARCHAR(50) = NULL,
+    @obra_social VARCHAR(100) = NULL,
+    @nro_obra_social INT = NULL,
+    @telefono_emergencia VARCHAR(50) = NULL,
+    @id_persona_resp INT,
+    @nombre_resp VARCHAR(50),
+    @apellido_resp VARCHAR(50),
+    @dni_resp INT,
+    @email_resp VARCHAR(255) = NULL,
+    @fecha_nac_resp DATE,
+    @telefono_resp VARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Actualizar persona menor
+    EXEC socios.actualizar_persona_sp
+        @id_persona_menor, @nombre_menor, @apellido_menor, @dni_menor, @email_menor, @fecha_nac_menor, @telefono_menor, 0;
+
+    -- Obtener socio menor
+    DECLARE @id_socio INT;
+    SELECT @id_socio = id_socio FROM socios.Socio WHERE id_persona = @id_persona_menor AND activo = 1;
+
+    IF @id_socio IS NULL
+    BEGIN
+        RAISERROR('[Error] socios.actualizar_inscripcion_menor_sp: No se encontró un socio activo para el menor.', 16, 1);
+        RETURN;
+    END
+
+    -- Actualizar socio menor
+    DECLARE @edad SMALLINT = socios.fn_obtener_edad_por_fnac(@fecha_nac_menor);
+    DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad);
+
+    EXEC socios.actualizar_socio_sp
+        @id_socio, @id_categoria, @obra_social, @nro_obra_social, @telefono_emergencia;
+
+    -- Actualizar responsable
+    EXEC socios.actualizar_persona_sp
+        @id_persona_resp, @nombre_resp, @apellido_resp, @dni_resp, @email_resp, @fecha_nac_resp, @telefono_resp, 0;
+END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.baja_inscripcion_menor_sp
+Descripción: Da de baja al socio menor (borrado lógico), verificando el responsable.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.baja_inscripcion_menor_sp
+    @id_socio_menor INT,
+    @id_persona_responsable INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Declarar variable para almacenar el id_persona del menor
+    DECLARE @id_persona_menor INT;
+
+    -- Obtener el id_persona asociado al id_socio_menor
+    SELECT @id_persona_menor = id_persona
+    FROM socios.Socio
+    WHERE id_socio = @id_socio_menor;
+
+    -- Verificar si el socio menor existe
+    IF @id_persona_menor IS NULL
+    BEGIN
+        RAISERROR('[Error] socios.baja_inscripcion_menor_sp: El socio menor no existe.', 16, 1);
+        RETURN;
+    END
+
+    -- Verificar si el id_persona_responsable es el responsable de este menor
+    IF NOT EXISTS (
+        SELECT 1
+        FROM socios.Parentesco
+        WHERE id_persona = @id_persona_menor
+          AND id_persona_responsable = @id_persona_responsable
+    )
+    BEGIN
+        RAISERROR('[Error] socios.baja_inscripcion_menor_sp: El responsable no tiene al menor a cargo.', 16, 1);
+        RETURN;
+    END
+
+    -- Si las validaciones pasan, proceder a dar de baja el socio (borrado lógico)
+    EXEC socios.eliminar_socio_sp @id_socio = @id_socio_menor;
+END
+GO
+
 GO
 
 /***********************************************************************
