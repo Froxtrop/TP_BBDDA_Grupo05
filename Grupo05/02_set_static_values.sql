@@ -103,3 +103,14 @@ VALUES
 
 SELECT * FROM socios.TarifaActividadRecreativa
 
+INSERT INTO socios.MedioDePago
+(nombre)
+VALUES
+('Visa'),
+('MasterCard'),
+('Tarjeta Naranja'),
+('Pago Fácil'),
+('Rapipago'),
+('Transferencia Mercado Pago');
+
+SELECT * FROM socios.MedioDePago

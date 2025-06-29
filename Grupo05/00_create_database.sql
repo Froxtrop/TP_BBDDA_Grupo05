@@ -488,12 +488,10 @@ IF OBJECT_ID(N'[socios].[Pago]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.Pago (
 		id_pago INT IDENTITY(1,1) PRIMARY KEY,
-		id_factura INT NOT NULL,
 		id_medio INT NOT NULL,
 		monto DECIMAL(10,2) NOT NULL,
 		fecha_pago DATE NOT NULL,
 		codigo_de_referencia varchar(50),
-		CONSTRAINT fk_Pago_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura(id_factura),
 		CONSTRAINT fk_Pago_id_medio FOREIGN KEY (id_medio) REFERENCES socios.MedioDePago(id_medio)
 	);
 END
@@ -501,11 +499,6 @@ ELSE
 	PRINT 'Ya existe la tabla [socios].[Pago]';
 GO
 -- Índices Pago
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Pago_id_factura' AND object_id = OBJECT_ID(N'[socios].[Pago]', N'U'))
-BEGIN
-    CREATE NONCLUSTERED INDEX ix_Pago_id_factura ON socios.Pago(id_factura);
-END;
-GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Pago_id_medio' AND object_id = OBJECT_ID(N'[socios].[Pago]', N'U'))
 BEGIN
     CREATE NONCLUSTERED INDEX ix_Pago_id_medio ON socios.Pago(id_medio);
