@@ -1118,3 +1118,98 @@ BEGIN
 		WHERE id_factura = @id_factura;
 END
 GO
+
+/***********************************************************************
+Nombre del procedimiento: generar_factura_recreativa_sp
+Descripción: Se realiza la creación de la factura con las actividades
+	recreativas.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.generar_factura_recreativa_sp
+    @id_socio INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+	-- Validamos si el socio existe
+	IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio)
+	BEGIN
+        RAISERROR('El socio proporcionado no existe.', 16, 1);
+        RETURN;
+    END
+
+	DECLARE @fecha_actual DATE = GETDATE(),
+			@id_factura INT,
+			@monto_recreativa DECIMAL(10,2) = 0;
+
+	-- Calculamos primer dia del mes
+	DECLARE @primer_dia_mes DATE = DATEFROMPARTS(YEAR(@fecha_actual), 1, 1);
+
+	BEGIN TRANSACTION Tran1
+	BEGIN TRY
+		-- Generamos el registro de factura inicial
+		INSERT INTO socios.Factura (fecha_emision, total_bruto, total_neto)
+			VALUES (@fecha_actual, 0, 0);
+		SET @id_factura = SCOPE_IDENTITY();
+
+		/* Nos traemos las actividades recreativas a las cuales está/estuvo
+		inscripto el socio en el mes y las insertamos en DetalleRecreativa */
+		INSERT INTO socios.DetalleRecreativa (
+			id_inscripcion_rec, 
+			id_factura, 
+			monto
+		)
+		SELECT 
+			iar.id_inscripcion_rec,
+			@id_factura,
+			tar.valor
+		FROM socios.InscripcionActividadRecreativa iar
+		INNER JOIN socios.TarifaActividadRecreativa tar ON tar.id_actividad_rec = iar.id_actividad_rec
+			WHERE iar.id_socio = @id_socio
+				AND NOT EXISTS (
+					SELECT 1 FROM socios.DetalleRecreativa dr WHERE dr.id_inscripcion_rec = iar.id_inscripcion_rec
+				) -- Si ya esta en la tabla de Detalles quiere decir que ya esta facturado entonces no lo tenemos en cuenta
+				AND (iar.fecha_baja IS NULL OR iar.fecha_baja >= @primer_dia_mes)
+				AND tar.vigente_desde <= @fecha_actual AND
+					(tar.vigente_hasta >= @primer_dia_mes OR tar.vigente_hasta IS NULL)
+
+		-- Sumamos el monto todos los detalles facturados
+		SELECT @monto_recreativa = SUM(monto) FROM socios.DetalleRecreativa WHERE id_factura = @id_factura
+		
+		-- Si no hay monto no hay factura para generar
+		IF @monto_recreativa IS NULL OR @monto_recreativa = 0
+		BEGIN
+			ROLLBACK TRANSACTION Tran1
+			RETURN;
+		END
+
+		-- Actualizamos la factura con los montos calculados
+		UPDATE socios.Factura 
+			SET total_bruto = @monto_recreativa, total_neto = @monto_recreativa
+			WHERE id_factura = @id_factura;
+
+		DECLARE @responsable INT = NULL;
+		-- Buscamos el responsable de realizar el pago
+		-- Si no está en la tabla parentesco entonces se pone al socio de la factura.
+		SELECT @responsable = COALESCE(par.id_persona_responsable, s.id_persona)
+		FROM socios.Socio s
+		INNER JOIN socios.Persona p ON s.id_persona = p.id_persona
+		LEFT JOIN socios.Parentesco par ON par.id_persona = s.id_persona
+		WHERE s.id_socio = @id_socio
+		AND (par.fecha_hasta >= @primer_dia_mes OR par.fecha_hasta IS NULL);
+
+		INSERT INTO socios.FacturaResponsable(id_factura, id_persona)
+			VALUES(@id_factura, @responsable);
+
+		COMMIT TRANSACTION Tran1
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION Tran1
+
+		DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+	END CATCH
+END
+GO
