@@ -1151,6 +1151,13 @@ BEGIN
 			VALUES (@fecha_actual, 0, 0);
 		SET @id_factura = SCOPE_IDENTITY();
 
+		-- Calculamos la edad del socio
+		DECLARE @edad SMALLINT;
+		SELECT @edad = socios.fn_obtener_edad_por_fnac(p.fecha_de_nacimiento)
+			FROM socios.Socio s
+			INNER JOIN socios.Persona p ON p.id_persona = s.id_persona
+			WHERE s.id_socio = @id_socio;
+
 		/* Nos traemos las actividades recreativas a las cuales está/estuvo
 		inscripto el socio en el mes y las insertamos en DetalleRecreativa */
 		INSERT INTO socios.DetalleRecreativa (
@@ -1171,6 +1178,25 @@ BEGIN
 				AND (iar.fecha_baja IS NULL OR iar.fecha_baja >= @primer_dia_mes)
 				AND tar.vigente_desde <= @fecha_actual AND
 					(tar.vigente_hasta >= @primer_dia_mes OR tar.vigente_hasta IS NULL)
+				AND tar.modalidad = 'Día' /****** Ver como solucionamos esto ******/
+				AND tar.invitado = 0 -- La tarifa corresponde a socios
+				AND (
+					tar.edad_maxima >= @edad
+					OR
+					-- En caso de que la edad sea menor a una edad_maxima no debe traer 
+					-- el registro con edad_maxima = NULL
+					(tar.edad_maxima IS NULL AND NOT EXISTS (
+						SELECT 1 
+						FROM socios.TarifaActividadRecreativa tar2
+						WHERE tar2.id_actividad_rec = tar.id_actividad_rec
+							AND tar2.vigente_desde <= @fecha_actual
+							AND (tar2.vigente_hasta >= @fecha_actual OR tar2.vigente_hasta IS NULL)
+							AND tar2.modalidad = tar.modalidad
+							AND tar2.invitado = tar.invitado
+							AND tar2.edad_maxima >= @edad
+						)
+					)
+				);
 
 		-- Sumamos el monto todos los detalles facturados
 		SELECT @monto_recreativa = SUM(monto) FROM socios.DetalleRecreativa WHERE id_factura = @id_factura
@@ -1196,6 +1222,127 @@ BEGIN
 		LEFT JOIN socios.Parentesco par ON par.id_persona = s.id_persona
 		WHERE s.id_socio = @id_socio
 		AND (par.fecha_hasta >= @primer_dia_mes OR par.fecha_hasta IS NULL);
+
+		INSERT INTO socios.FacturaResponsable(id_factura, id_persona)
+			VALUES(@id_factura, @responsable);
+
+		COMMIT TRANSACTION Tran1
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION Tran1
+
+		DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+	END CATCH
+END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: generar_factura_recreativa_invitado_sp
+Descripción: Se realiza la creación de la factura con la actividad
+	recreativa a la que asistió el invitado.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.generar_factura_recreativa_invitado_sp
+    @id_persona INT, -- Invitado
+	@id_inscripcion_rec INT -- Actividad a la cual el socio esta incripto y lo invito
+AS
+BEGIN
+    SET NOCOUNT ON;
+	-- Validamos si la persona existe. Los datos del invitado debieron ser registrados previamente
+	IF NOT EXISTS (SELECT 1 FROM socios.Persona WHERE id_persona = @id_persona)
+	BEGIN
+        RAISERROR('El invitado proporcionado no existe.', 16, 1);
+        RETURN;
+    END
+
+	-- Validamos si la inscripcion a la cual fue invitado existe
+	IF NOT EXISTS (SELECT 1 FROM socios.InscripcionActividadRecreativa WHERE id_actividad_rec = @id_inscripcion_rec)
+	BEGIN
+        RAISERROR('No hay invitación por parte de un socio.', 16, 1);
+        RETURN;
+    END
+
+	DECLARE @fecha_actual DATE = GETDATE(),
+			@id_factura INT,
+			@monto_recreativa DECIMAL(10,2) = 0;
+
+	BEGIN TRANSACTION Tran1
+	BEGIN TRY
+		-- Generamos el registro de factura inicial
+		INSERT INTO socios.Factura (fecha_emision, total_bruto, total_neto)
+			VALUES (@fecha_actual, 0, 0);
+		SET @id_factura = SCOPE_IDENTITY();
+
+		-- Calculamos la edad del invitado
+		DECLARE @edad SMALLINT;
+		SELECT @edad = socios.fn_obtener_edad_por_fnac(fecha_de_nacimiento)
+			FROM socios.Persona WHERE id_persona = @id_persona;
+
+		-- Buscamos la actividad recreativa a la que asiste
+		DECLARE @id_actividad_rec INT;
+		SELECT @id_actividad_rec = id_actividad_rec
+			FROM socios.InscripcionActividadRecreativa
+			WHERE id_inscripcion_rec = @id_inscripcion_rec;
+
+		-- Obtenemos el valor de la entrada para invitado
+		SELECT @monto_recreativa = valor 
+			FROM socios.TarifaActividadRecreativa tar
+			WHERE tar.id_actividad_rec = @id_actividad_rec
+				AND tar.vigente_desde <= @fecha_actual
+				AND (tar.vigente_hasta >= @fecha_actual OR tar.vigente_hasta IS NULL)
+				AND tar.modalidad = 'Día'
+				AND tar.invitado = 1 -- La tarifa corresponde a invitados
+				AND (
+					tar.edad_maxima >= @edad
+					OR
+					-- En caso de que la edad sea menor a una edad_maxima no debe traer 
+					-- el registro con edad_maxima = NULL
+					(tar.edad_maxima IS NULL AND NOT EXISTS (
+						SELECT 1 
+						FROM socios.TarifaActividadRecreativa tar2
+						WHERE tar2.id_actividad_rec = tar.id_actividad_rec
+							AND tar2.vigente_desde <= @fecha_actual
+							AND (tar2.vigente_hasta >= @fecha_actual OR tar2.vigente_hasta IS NULL)
+							AND tar2.modalidad = tar.modalidad
+							AND tar2.invitado = tar.invitado
+							AND tar2.edad_maxima >= @edad
+						)
+					)
+				);
+
+		/* Generamos el registro del Detalle de la Invitacion */
+		INSERT INTO socios.DetalleInvitacion(
+			id_inscripcion_rec,
+			id_persona_invitada,
+			id_factura,
+			monto,
+			fecha
+		)
+		VALUES (
+			@id_inscripcion_rec,
+			@id_persona,
+			@id_factura,
+			@monto_recreativa,
+			@fecha_actual
+		);
+
+		-- Actualizamos la factura con el monto obtenido
+		UPDATE socios.Factura 
+			SET total_bruto = @monto_recreativa, total_neto = @monto_recreativa
+			WHERE id_factura = @id_factura;
+
+		DECLARE @responsable INT = NULL;
+		-- Buscamos el responsable de realizar el pago
+		-- Si no está en la tabla parentesco entonces se pone a la misma persona invitada.
+		SELECT @responsable = COALESCE(par.id_persona_responsable, p.id_persona)
+		FROM socios.Persona p
+		LEFT JOIN socios.Parentesco par ON par.id_persona = p.id_persona
+		WHERE p.id_persona = @id_persona
+		AND (par.fecha_hasta >= @fecha_actual OR par.fecha_hasta IS NULL);
 
 		INSERT INTO socios.FacturaResponsable(id_factura, id_persona)
 			VALUES(@id_factura, @responsable);
