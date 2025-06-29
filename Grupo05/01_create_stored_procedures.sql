@@ -1016,7 +1016,7 @@ BEGIN
 			@id_membresia,
 			tad.valor
 		FROM socios.InscripcionActividadDeportiva iad
-		INNER JOIN TarifaActividadDeportiva tad ON tad.id_actividad_dep = iad.id_actividad_dep
+		INNER JOIN socios.TarifaActividadDeportiva tad ON tad.id_actividad_dep = iad.id_actividad_dep
 			WHERE iad.id_socio = @id_socio
 				AND (iad.fecha_baja IS NULL OR iad.fecha_baja >= @primer_dia_mes)
 				AND tad.vigente_desde <= @fecha_actual AND
@@ -1025,7 +1025,7 @@ BEGIN
 		-- Guardamos el monto total de todas las actividades deportivas y la cantidad actividades.
 		SELECT @monto_deportiva = SUM(tad.valor), @cantidad_act_dep = COUNT(1)
 		FROM socios.InscripcionActividadDeportiva iad
-		INNER JOIN TarifaActividadDeportiva tad ON tad.id_actividad_dep = iad.id_actividad_dep
+		INNER JOIN socios.TarifaActividadDeportiva tad ON tad.id_actividad_dep = iad.id_actividad_dep
 			WHERE iad.id_socio = @id_socio
 				AND (iad.fecha_baja IS NULL OR iad.fecha_baja >= @primer_dia_mes)
 				AND tad.vigente_desde <= @fecha_actual AND
