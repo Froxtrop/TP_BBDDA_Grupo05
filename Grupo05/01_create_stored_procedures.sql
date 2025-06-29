@@ -1178,7 +1178,7 @@ BEGIN
 				AND (iar.fecha_baja IS NULL OR iar.fecha_baja >= @primer_dia_mes)
 				AND tar.vigente_desde <= @fecha_actual AND
 					(tar.vigente_hasta >= @primer_dia_mes OR tar.vigente_hasta IS NULL)
-				AND tar.modalidad = 'Día' /****** Ver como solucionamos esto ******/
+				AND tar.modalidad = iar.modalidad
 				AND tar.invitado = 0 -- La tarifa corresponde a socios
 				AND (
 					tar.edad_maxima >= @edad
@@ -1346,6 +1346,66 @@ BEGIN
 
 		INSERT INTO socios.FacturaResponsable(id_factura, id_persona)
 			VALUES(@id_factura, @responsable);
+
+		COMMIT TRANSACTION Tran1
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION Tran1
+
+		DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+	END CATCH
+END
+GO
+
+/*
+  ____                   
+ |  _ \ __ _  __ _  ___  
+ | |_) / _` |/ _` |/ _ \ 
+ |  __/ (_| | (_| | (_) |
+ |_|   \__,_|\__, |\___/ 
+             |___/       
+*/
+
+/***********************************************************************
+Nombre del procedimiento: pagar_factura_sp
+Descripción: Se pasa a paga la factura pasada por parámetro.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.pagar_factura_sp
+    @id_factura INT,
+	@id_medio INT,
+	@codigo_de_referencia VARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+	-- Validamos si la factura existe
+	IF NOT EXISTS (SELECT 1 FROM socios.Factura WHERE id_factura = @id_factura)
+	BEGIN
+        RAISERROR('La factura proporcionada no existe.', 16, 1);
+        RETURN;
+    END
+	-- Validamos el medio de pago utilizado
+	IF NOT EXISTS (SELECT 1 FROM socios.MedioDePago WHERE id_medio = @id_medio)
+	BEGIN
+        RAISERROR('El medio de pago proporcionada no existe.', 16, 1);
+        RETURN;
+    END
+	
+	BEGIN TRANSACTION Tran1
+	BEGIN TRY
+		DECLARE @id_pago INT;
+		-- Insertamos en la tabla de Pago con los datos proporcionados
+		INSERT INTO socios.Pago (id_medio, fecha_pago, codigo_de_referencia)
+			VALUES (@id_medio, GETDATE(), @codigo_de_referencia);
+
+		SET @id_pago = SCOPE_IDENTITY();
+		-- Asociamos el pago a la factura
+		INSERT INTO socios.DetalleDePago(id_factura, id_pago)
+			VALUES (@id_factura, @id_pago);
 
 		COMMIT TRANSACTION Tran1
 	END TRY
