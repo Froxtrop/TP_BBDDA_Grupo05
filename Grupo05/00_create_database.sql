@@ -1,6 +1,6 @@
 USE master
 GO
-DROP DATABASE Com2900G05
+DROP DATABASE if exists Com2900G05 --cerrar las pestañas para borrar la bdd
 GO
 /***********************************************************************
  * Enunciado: Cree la base de datos, entidades y relaciones. Incluya
