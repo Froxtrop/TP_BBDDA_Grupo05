@@ -892,7 +892,8 @@ Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.inscribir_socio_a_actividad_rec_sp
     @id_socio INT,
-    @id_actividad_recreativa INT
+    @id_actividad_recreativa INT,
+	@modalidad VARCHAR(10)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -908,6 +909,17 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM socios.ActividadRecreativa WHERE id_actividad_rec = @id_actividad_recreativa)
     BEGIN
         RAISERROR('La actividad recreativa no existe.', 16, 1);
+        RETURN;
+    END
+
+	-- Validar que la modalidad exista
+    IF NOT EXISTS (
+		SELECT 1 FROM socios.TarifaActividadRecreativa
+			WHERE id_actividad_rec = @id_actividad_recreativa
+				AND modalidad = @modalidad
+		)
+    BEGIN
+        RAISERROR('La modalidad no existe para la actividad recreativa.', 16, 1);
         RETURN;
     END
 
@@ -928,13 +940,15 @@ BEGIN
         id_actividad_rec,
         id_socio,
         fecha_inscripcion,
-        fecha_baja
+        fecha_baja,
+		modalidad
     )
     VALUES (
         @id_actividad_recreativa,
         @id_socio,
         GETDATE(),
-        NULL
+        NULL,
+		@modalidad
     );
 
     PRINT 'Inscripción a actividad recreativa realizada correctamente.';
