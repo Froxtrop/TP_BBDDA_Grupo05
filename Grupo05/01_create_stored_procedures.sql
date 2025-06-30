@@ -681,7 +681,7 @@ END
 GO
 
 /***********************************************************************
-Nombre del procedimiento: inscribir_socio_a_actividad_sp
+Nombre del procedimiento: inscribir_socio_a_actividad_dep_sp
 Descripción: Inscribe a un socio en una actividad deportiva.
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
@@ -736,6 +736,35 @@ BEGIN
 		);
 
     PRINT 'Inscripción realizada correctamente.';
+END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: baja_inscripcion_actividad_dep_sp
+Descripción: Da de baja una inscripción de una actividad deportiva.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.baja_inscripcion_actividad_dep_sp
+    @id_inscripcion_dep INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validar que la inscripcion deportiva exista y que no este dada de baja
+    IF NOT EXISTS (
+		SELECT 1 FROM socios.InscripcionActividadDeportiva 
+			WHERE id_inscripcion_dep = @id_inscripcion_dep
+			AND fecha_baja IS NULL
+	)
+    BEGIN
+        RAISERROR('La inscripcion no existe o ya fue dada de baja.', 16, 1);
+        RETURN;
+    END
+
+    -- Actualizar la inscripción con la fecha de baja
+    UPDATE socios.InscripcionActividadDeportiva SET
+        fecha_baja = GETDATE()
+		WHERE id_inscripcion_dep = @id_inscripcion_dep;
 END
 GO
 
@@ -810,6 +839,35 @@ BEGIN
     );
 
     PRINT 'Inscripción a actividad recreativa realizada correctamente.';
+END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: baja_inscripcion_actividad_rec_sp
+Descripción: Da de baja una inscripción de una actividad recreativa.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.baja_inscripcion_actividad_rec_sp
+    @id_inscripcion_rec INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validar que la inscripcion recreativa exista y que no este dada de baja
+    IF NOT EXISTS (
+		SELECT 1 FROM socios.InscripcionActividadRecreativa
+			WHERE id_inscripcion_rec = @id_inscripcion_rec
+			AND fecha_baja IS NULL
+	)
+    BEGIN
+        RAISERROR('La inscripcion no existe o ya tiene fecha de baja.', 16, 1);
+        RETURN;
+    END
+
+    -- Actualizar la inscripción con la fecha de baja
+    UPDATE socios.InscripcionActividadRecreativa SET
+        fecha_baja = GETDATE()
+		WHERE id_inscripcion_rec = @id_inscripcion_rec;
 END
 GO
 
