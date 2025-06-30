@@ -695,10 +695,73 @@ Descripción: Cargar tarifa deportiva
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.cargar_tarifa_dep_sp
+	@id_actividad_dep INT,
+	@vigente_desde DATE = NULL,
+	@vigente_hasta DATE = NULL,
+	@valor DECIMAL(10,2)
 AS
 BEGIN
     SET NOCOUNT ON;
-	RAISERROR('Sin implementar', 16, 1);
+
+	-- Validamos el valor
+	IF @valor IS NULL OR @valor < 0
+	BEGIN
+		RAISERROR('El valor de la tarifa debe ser positivo.', 16, 1);
+		RETURN;
+	END
+
+	-- Validamos el valor
+	IF NOT EXISTS(SELECT 1 FROM socios.ActividadDeportiva WHERE id_actividad_dep = @id_actividad_dep)
+	BEGIN
+		RAISERROR('La actividad deportiva no existe.', 16, 1);
+		RETURN;
+	END
+
+	IF @vigente_desde IS NULL
+        SET @vigente_desde = GETDATE();
+
+	-- Validación de fechas
+	IF @vigente_desde IS NOT NULL AND @vigente_hasta IS NOT NULL
+	BEGIN
+		IF @vigente_desde > @vigente_hasta
+		BEGIN
+		    RAISERROR('La fecha de inicio no puede ser mayor que la fecha de fin.', 16, 1);
+			RETURN;
+		END
+	END
+
+	DECLARE @fecha_null DATE = '9999-12-31';
+	-- Validar que no exista una tarifa para esas fechas
+    IF EXISTS (
+        SELECT 1 
+        FROM socios.TarifaActividadDeportiva
+        WHERE id_actividad_dep = @id_actividad_dep
+			AND (
+				-- Condición de solapamiento:
+				-- El inicio del nuevo rango (@vigente_desde) es menor o igual al fin del rango existente (o "sin limite").
+				@vigente_desde <= ISNULL(vigente_hasta, @fecha_null)
+				AND
+				-- El inicio del rango existente (vigente_desde) es menor o igual al fin del nuevo rango (o "sin limite").
+				vigente_desde <= ISNULL(@vigente_hasta, @fecha_null)
+			)
+    )
+    BEGIN
+        RAISERROR('Ya existe una tarifa vigente para las fechas dadas.', 16, 1);
+		RETURN;
+	END
+
+	INSERT INTO socios.TarifaActividadDeportiva (
+        id_actividad_dep,
+        vigente_desde,
+        vigente_hasta,
+        valor
+    )
+    VALUES (
+        @id_actividad_dep,
+        @vigente_desde,
+        @vigente_hasta,
+        @valor
+    );
 END
 GO
 
