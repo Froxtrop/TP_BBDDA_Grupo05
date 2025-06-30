@@ -26,7 +26,7 @@ SELECT * FROM socios.TarifaCategoria
 
 -- Carga de datos en la tabla actividad deportiva
 INSERT INTO socios.ActividadDeportiva(nombre)
-VALUES ('Futsal'),('Voley'),('Taekwondo'),('Baile artistico'),('Natacion'),('Ajedrez')
+VALUES ('Futsal'),('Vóley'),('Taekwondo'),('Baile artístico'),('Natación'),('Ajedrez')
 SELECT * FROM socios.ActividadDeportiva
 
 -- Carga de datos en la tabla tarifa actividad deportiva
@@ -124,7 +124,7 @@ SELECT * FROM socios.MedioDePago
 */
 EXEC socios.cargar_responsables_de_pago_csv_sp
      @ruta_archivo = 'Z:\UNLAM\2DO\Base de Datos Aplicada\Responsables-de-Pago.csv'; 
-   
+GO
 SELECT * FROM socios.socio
 
 /*		 ___                     _            _                              _       
@@ -138,7 +138,20 @@ SELECT * FROM socios.socio
 		|_| |_| |_|\___|_| |_|\___/|_|                                               
 */
 
-SELECT * FROM socios.Parentesco;
 EXEC socios.cargar_grupo_familiar_csv_sp
      @ruta_archivo = 'Z:\UNLAM\2DO\Base de Datos Aplicada\Grupo-Familiar.csv'; 
+GO
 SELECT * FROM socios.Parentesco;
+
+/*
+     _        _     _                  _       
+    / \   ___(_)___| |_ ___ _ __   ___(_) __ _ 
+   / _ \ / __| / __| __/ _ \ '_ \ / __| |/ _` |
+  / ___ \\__ \ \__ \ ||  __/ | | | (__| | (_| |
+ /_/   \_\___/_|___/\__\___|_| |_|\___|_|\__,_|
+                                               
+*/
+EXEC socios.cargar_asistencia_actividad_csv_sp
+	@ruta_archivo = 'Z:\UNLAM\2DO\Base de Datos Aplicada\presentismo-actividades.csv';
+GO
+SELECT * FROM socios.AsistenciaActividadDeportiva;

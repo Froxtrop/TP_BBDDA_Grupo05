@@ -77,7 +77,7 @@ BEGIN
             -- Extraer datos de la fila
             SELECT
                 @nro_socio_csv = TRIM(Nro_Socio), @nombre_csv = TRIM(Nombre), @apellido_csv = TRIM(Apellido),
-                @dni_csv = TRY_CAST(DNI AS BIGINT), @email_csv = TRIM(Email),
+                @dni_csv = TRY_CAST(DNI AS BIGINT), @email_csv = TRIM(LOWER(REPLACE(Email, ' ', ''))),
                 @fecha_nac_csv = TRY_CONVERT(DATE, Fecha_Nacimiento, 103), @telefono_csv = TRIM(Telefono_Contacto),
                 @obra_social_csv = TRIM(Obra_Social), @nro_obra_social_varchar = TRY_CAST(REPLACE(Nro_Obra_Social, '%-', '') AS INT),
                 @telefono_emergencia_csv = TRIM(Telefono_Emergencia_1)
@@ -89,7 +89,7 @@ BEGIN
             -- Validaciones de datos críticos
             IF @id_socio_manual IS NULL OR @fecha_nac_csv IS NULL
             BEGIN
-                PRINT 'ADVERTENCIA: Fila ' + CAST(@i AS VARCHAR) + ' omitida. Motivo: Nro de Socio o Fecha de Nacimiento inválidos en el CSV.';
+                PRINT 'ADVERTENCIA: Fila ' + CAST(@i AS VARCHAR) + ' omitida. Motivo: Nro de Socio: ' + CAST(@id_socio_manual AS VARCHAR) + ' o Fecha de Nacimiento inválidos en el CSV.';
                 SET @i += 1; CONTINUE;
             END
 
@@ -262,7 +262,7 @@ BEGIN
                 @nombre = TRIM(Nombre),
                 @apellido = TRIM(Apellido),
                 @dni = TRY_CAST(DNI AS BIGINT),
-                @email = TRIM(Email),
+                @email = TRIM(LOWER(REPLACE(Email, ' ', ''))),
                 @fecha_nac = TRY_CONVERT(DATE, Fecha_Nacimiento, 103),
                 @telefono = TRIM(Telefono_Contacto),
                 @telefono_emergencia = TRIM(Telefono_Emergencia),
@@ -347,6 +347,159 @@ BEGIN
         END
         IF OBJECT_ID('tempdb..#TempGrupo') IS NOT NULL DROP TABLE #TempGrupo;
         PRINT 'Error fatal: ' + ERROR_MESSAGE();
+    END CATCH
+END
+GO
+
+/*
+     _        _     _                  _       
+    / \   ___(_)___| |_ ___ _ __   ___(_) __ _ 
+   / _ \ / __| / __| __/ _ \ '_ \ / __| |/ _` |
+  / ___ \\__ \ \__ \ ||  __/ | | | (__| | (_| |
+ /_/   \_\___/_|___/\__\___|_| |_|\___|_|\__,_|
+                                               
+*/
+
+/***********************************************************************
+Nombre del procedimiento: socios.cargar_asistencia_actividad_csv_sp
+Descripción: Carga los datos del archivo presentismo-actividades.csv a una tabla temporal y
+	luego los inserta en las tablas correspondientes.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+
+CREATE OR ALTER PROCEDURE socios.cargar_asistencia_actividad_csv_sp
+    @ruta_archivo NVARCHAR(1000)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF OBJECT_ID('socios.Staging_AsistenciaActividad', 'U') IS NOT NULL
+        DROP TABLE socios.Staging_AsistenciaActividad;
+
+    CREATE TABLE socios.Staging_AsistenciaActividad (
+        Nro_Socio VARCHAR(100),
+        Actividad VARCHAR(255),
+        Fecha_Asistencia VARCHAR(100),
+        Asistencia CHAR(1),
+        Profesor VARCHAR(100)
+    );
+
+    BEGIN TRY
+        DECLARE @sql NVARCHAR(MAX);
+        SET @sql = N'
+            BULK INSERT socios.Staging_AsistenciaActividad
+            FROM ''' + @ruta_archivo + '''
+            WITH (
+                FIRSTROW = 2,
+                FIELDTERMINATOR = '';'',
+                ROWTERMINATOR = ''0x0a'',
+                CODEPAGE = ''65001''
+            );';
+        EXEC sp_executesql @sql;
+
+        IF NOT EXISTS (SELECT 1 FROM socios.Staging_AsistenciaActividad)
+        BEGIN
+            RAISERROR('No se cargaron filas desde el archivo.', 16, 1);
+            RETURN;
+        END
+
+        -- Tabla temporal con flag de primera asistencia por socio+actividad
+        SELECT 
+            ROW_NUMBER() OVER (PARTITION BY TRIM(Nro_Socio), TRIM(Actividad) ORDER BY TRY_CONVERT(DATE, Fecha_Asistencia, 103)) AS orden_asistencia,
+            ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS id_row,
+            TRIM(Nro_Socio) AS Nro_Socio,
+            TRIM(Actividad) AS Actividad,
+            TRY_CONVERT(DATE, Fecha_Asistencia, 103) AS Fecha_Asistencia,
+            TRIM(Asistencia) AS Asistencia,
+            TRIM(REPLACE(Profesor, ';', '')) AS Profesor
+        INTO #TempAsistencia
+        FROM socios.Staging_AsistenciaActividad;
+
+        DECLARE @max INT = @@ROWCOUNT, @i INT = 1;
+        DECLARE @nro_socio VARCHAR(50), @id_socio INT, @actividad VARCHAR(255), @id_actividad INT,
+                @fecha DATE, @asistencia CHAR(1), @profesor VARCHAR(50), @email_profesor VARCHAR(255),
+                @orden INT;
+
+        WHILE @i <= @max
+        BEGIN
+            SET @id_socio = NULL;
+            SET @id_actividad = NULL;
+
+            SELECT 
+                @nro_socio = Nro_Socio,
+                @actividad = Actividad,
+                @fecha = Fecha_Asistencia,
+                @asistencia = Asistencia,
+                @profesor = Profesor,
+                @orden = orden_asistencia
+            FROM #TempAsistencia
+            WHERE id_row = @i;
+
+            SET @id_socio = TRY_CAST(REPLACE(@nro_socio, 'SN-', '') AS INT);
+
+            IF @id_socio IS NULL
+            BEGIN
+                PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Nro de socio inválido.';
+                SET @i += 1; CONTINUE;
+            END
+
+            SELECT @id_actividad = id_actividad_dep
+            FROM socios.ActividadDeportiva
+            WHERE nombre = @actividad;
+
+            IF @id_actividad IS NULL
+            BEGIN
+                PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Actividad "' + ISNULL(@actividad, 'NULL') + '" no encontrada.';
+                SET @i += 1; CONTINUE;
+            END
+
+            IF @fecha IS NULL
+            BEGIN
+                PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Fecha de asistencia inválida.';
+                SET @i += 1; CONTINUE;
+            END
+
+            SET @email_profesor = LOWER(REPLACE(REPLACE(@profesor,' ','') + '@gmail.com', ' ', ''));
+
+            -- Si es la primera asistencia de ese socio en esa actividad, lo inscribimos
+            IF @orden = 1
+            BEGIN
+                BEGIN TRY
+                    EXEC socios.inscribir_socio_a_actividad_dep_sp
+                        @id_socio = @id_socio,
+                        @id_actividad_deportiva = @id_actividad,
+						@fecha_alta = @fecha,
+						@fecha_baja = NULL;
+                END TRY
+                BEGIN CATCH
+                    PRINT 'ERROR inscripción fila ' + CAST(@i AS VARCHAR) + ': ' + ERROR_MESSAGE();
+                    -- CONTINUE con asistencia de todas formas, por si ya estaba inscripto
+                END CATCH
+            END
+
+            BEGIN TRY
+                EXEC socios.asistencia_socio_a_actividad_dep_sp
+                    @id_socio = @id_socio,
+                    @id_actividad_deportiva = @id_actividad,
+                    @fecha_asistencia = @fecha,
+                    @asistencia = @asistencia,
+                    @profesor = @profesor,
+                    @email_profesor = @email_profesor;
+            END TRY
+            BEGIN CATCH
+                PRINT 'ERROR asistencia fila ' + CAST(@i AS VARCHAR) + ': ' + ERROR_MESSAGE();
+            END CATCH;
+
+            SET @i += 1;
+        END
+
+        DROP TABLE #TempAsistencia;
+        PRINT 'Proceso de carga de asistencias finalizado.';
+
+    END TRY
+    BEGIN CATCH
+        IF OBJECT_ID('tempdb..#TempAsistencia') IS NOT NULL DROP TABLE #TempAsistencia;
+        PRINT 'ERROR fatal en el procedimiento: ' + ERROR_MESSAGE();
     END CATCH
 END
 GO

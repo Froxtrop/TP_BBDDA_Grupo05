@@ -687,10 +687,23 @@ Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.inscribir_socio_a_actividad_dep_sp
     @id_socio INT,
-    @id_actividad_deportiva INT
+    @id_actividad_deportiva INT,
+	@fecha_alta DATE = NULL,
+	@fecha_baja DATE = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+	IF @fecha_alta IS NULL
+        SET @fecha_alta = GETDATE();
+
+	IF @fecha_alta IS NOT NULL AND @fecha_baja IS NOT NULL
+	BEGIN
+		IF @fecha_alta > @fecha_baja
+			BEGIN
+			    RAISERROR('La fecha de inicio no puede ser mayor que la fecha de fin.', 16, 1);
+				RETURN;
+			END
+	END
 
     -- Validar que el socio exista
     IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio)
@@ -713,8 +726,12 @@ BEGIN
         FROM socios.InscripcionActividadDeportiva
         WHERE id_socio = @id_socio
           AND id_actividad_dep = @id_actividad_deportiva
+<<<<<<< Updated upstream
 		  AND fecha_inscripcion <= @fecha_actual
 				AND (fecha_baja >= @fecha_actual OR fecha_baja IS NULL)
+=======
+			AND fecha_baja IS NULL
+>>>>>>> Stashed changes
     )
     BEGIN
         RAISERROR('El socio ya está inscrito en esta actividad.', 16, 1);
@@ -731,11 +748,15 @@ BEGIN
     VALUES (
         @id_socio,
         @id_actividad_deportiva,
+<<<<<<< Updated upstream
         @fecha_actual,
 		NULL
+=======
+        @fecha_alta,
+		@fecha_baja
+>>>>>>> Stashed changes
 		);
 
-    PRINT 'Inscripción realizada correctamente.';
 END
 GO
 
