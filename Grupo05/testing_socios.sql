@@ -67,3 +67,29 @@ EXEC socios.inscribir_socio_a_actividad_rec_sp
 	'Día' -- modalidad
 
 SELECT * FROM socios.InscripcionActividadRecreativa
+
+/** Cargar asistencia actividad recreativva **/
+EXEC socios.asistencia_socio_a_actividad_rec_sp
+	1, -- id_socio
+	2, -- id_actividad_rec
+	'2025-06-29' -- fecha de asistencia
+
+-- Actividad a la que no se inscribió prueba de validacion
+EXEC socios.asistencia_socio_a_actividad_rec_sp
+	1, -- id_socio
+	1, -- id_actividad_rec
+	'2025-06-29' -- fecha de asistencia
+
+-- Actividad que no existe
+EXEC socios.asistencia_socio_a_actividad_rec_sp
+	1, -- id_socio
+	20, -- id_actividad_rec
+	'2025-06-29' -- fecha de asistencia
+
+-- Socio inexistente
+EXEC socios.asistencia_socio_a_actividad_rec_sp
+	1912389, -- id_socio
+	2, -- id_actividad_rec
+	'2025-06-29' -- fecha de asistencia
+
+SELECT * FROM socios.AsistenciaActividadRecreativa
