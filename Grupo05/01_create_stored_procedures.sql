@@ -680,6 +680,37 @@ BEGIN
 END
 GO
 
+/*
+  _____          _  __       
+ |_   _|_ _ _ __(_)/ _| __ _ 
+   | |/ _` | '__| | |_ / _` |
+   | | (_| | |  | |  _| (_| |
+   |_|\__,_|_|  |_|_|  \__,_|
+                             
+*/
+
+/***********************************************************************
+Nombre del procedimiento: socios.cargar_tarifa_dep_sp
+Descripción: Cargar tarifa deportiva
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.cargar_tarifa_dep_sp
+AS
+BEGIN
+    SET NOCOUNT ON;
+	RAISERROR('Sin implementar', 16, 1);
+END
+GO
+
+/*
+  ___                     _            _                  _        _   _       _     _           _ 
+ |_ _|_ __  ___  ___ _ __(_)_ __   ___(_) ___  _ __      / \   ___| |_(_)_   _(_) __| | __ _  __| |
+  | || '_ \/ __|/ __| '__| | '_ \ / __| |/ _ \| '_ \    / _ \ / __| __| \ \ / / |/ _` |/ _` |/ _` |
+  | || | | \__ \ (__| |  | | |_) | (__| | (_) | | | |  / ___ \ (__| |_| |\ V /| | (_| | (_| | (_| |
+ |___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| /_/   \_\___|\__|_| \_/ |_|\__,_|\__,_|\__,_|
+                           |_|                                                                     
+*/
+
 /***********************************************************************
 Nombre del procedimiento: inscribir_socio_a_actividad_dep_sp
 Descripción: Inscribe a un socio en una actividad deportiva.
@@ -719,19 +750,14 @@ BEGIN
         RETURN;
     END
 
-	DECLARE @fecha_actual DATE = GETDATE();
     -- Validar que no esté ya inscrito
     IF EXISTS (
         SELECT 1 
         FROM socios.InscripcionActividadDeportiva
         WHERE id_socio = @id_socio
           AND id_actividad_dep = @id_actividad_deportiva
-<<<<<<< Updated upstream
-		  AND fecha_inscripcion <= @fecha_actual
-				AND (fecha_baja >= @fecha_actual OR fecha_baja IS NULL)
-=======
-			AND fecha_baja IS NULL
->>>>>>> Stashed changes
+		  AND fecha_inscripcion <= @fecha_alta
+				AND (fecha_baja >= @fecha_alta OR fecha_baja IS NULL)
     )
     BEGIN
         RAISERROR('El socio ya está inscrito en esta actividad.', 16, 1);
@@ -748,15 +774,9 @@ BEGIN
     VALUES (
         @id_socio,
         @id_actividad_deportiva,
-<<<<<<< Updated upstream
-        @fecha_actual,
-		NULL
-=======
         @fecha_alta,
 		@fecha_baja
->>>>>>> Stashed changes
 		);
-
 END
 GO
 
