@@ -1597,3 +1597,33 @@ BEGIN
 	END CATCH
 END
 GO
+
+/***********************************************************************
+Nombre del procedimiento: genarar_nota_de_credito_sp
+Descripción: Se hace una nota de crédito a una factura.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.genarar_nota_de_credito_sp
+    @id_detalle_de_pago INT,
+	@cuit VARCHAR(20),
+	@razon_social VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+	-- Validamos si la factura existe
+	IF NOT EXISTS (SELECT 1 FROM socios.DetalleDePago WHERE id_detalle_de_pago = @id_detalle_de_pago)
+	BEGIN
+        RAISERROR('El detalle de pago proporcionado no existe.', 16, 1);
+        RETURN;
+    END
+	-- Validamos cuit
+	IF @cuit IS NULL
+	BEGIN
+        RAISERROR('El cuit no puede ser nulo.', 16, 1);
+        RETURN;
+    END
+
+	INSERT INTO socios.NotaDeCredito(id_detalle_de_pago, cuit, razon_social)
+		VALUES (@id_detalle_de_pago, @cuit, @razon_social);
+END
+GO
