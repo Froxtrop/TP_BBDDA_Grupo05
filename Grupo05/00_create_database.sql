@@ -128,7 +128,7 @@ GO
 IF OBJECT_ID(N'[socios].[Socio]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.Socio (
-		id_socio INT IDENTITY(1,1) PRIMARY KEY,
+		id_socio INT IDENTITY(5000,1) PRIMARY KEY,
 		id_persona INT NOT NULL,
 		id_categoria SMALLINT NOT NULL,
 		fecha_de_alta DATE NOT NULL,

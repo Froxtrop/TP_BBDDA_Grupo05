@@ -114,3 +114,31 @@ VALUES
 ('Transferencia Mercado Pago');
 
 SELECT * FROM socios.MedioDePago
+
+/*	 ___                     _            _                              _       
+	|_ _|_ __  ___  ___ _ __(_)_ __   ___(_) ___  _ __    ___  ___   ___(_) ___  
+	 | || '_ \/ __|/ __| '__| | '_ \ / __| |/ _ \| '_ \  / __|/ _ \ / __| |/ _ \ 
+	 | || | | \__ \ (__| |  | | |_) | (__| | (_) | | | | \__ \ (_) | (__| | (_) |
+	|___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| |___/\___/ \___|_|\___/ 
+                          |_|                                                
+*/
+EXEC socios.cargar_responsables_de_pago_csv_sp
+     @ruta_archivo = 'Z:\UNLAM\2DO\Base de Datos Aplicada\Responsables-de-Pago.csv'; 
+   
+SELECT * FROM socios.socio
+
+/*		 ___                     _            _                              _       
+		|_ _|_ __  ___  ___ _ __(_)_ __   ___(_) ___  _ __    ___  ___   ___(_) ___  
+		 | || '_ \/ __|/ __| '__| | '_ \ / __| |/ _ \| '_ \  / __|/ _ \ / __| |/ _ \ 
+		 | || | | \__ \ (__| |  | | |_) | (__| | (_) | | | | \__ \ (_) | (__| | (_) |
+		|___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| |___/\___/ \___|_|\___/ 
+		 _ __ ___   ___ _ __   ___|_| __                                             
+		| '_ ` _ \ / _ \ '_ \ / _ \| '__|                                            
+		| | | | | |  __/ | | | (_) | |                                               
+		|_| |_| |_|\___|_| |_|\___/|_|                                               
+*/
+
+SELECT * FROM socios.Parentesco;
+EXEC socios.cargar_grupo_familiar_csv_sp
+     @ruta_archivo = 'Z:\UNLAM\2DO\Base de Datos Aplicada\Grupo-Familiar.csv'; 
+SELECT * FROM socios.Parentesco;
