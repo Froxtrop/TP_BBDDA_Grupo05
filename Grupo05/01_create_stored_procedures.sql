@@ -706,12 +706,15 @@ BEGIN
         RETURN;
     END
 
+	DECLARE @fecha_actual DATE = GETDATE();
     -- Validar que no esté ya inscrito
     IF EXISTS (
         SELECT 1 
         FROM socios.InscripcionActividadDeportiva
         WHERE id_socio = @id_socio
           AND id_actividad_dep = @id_actividad_deportiva
+		  AND fecha_inscripcion <= @fecha_actual
+				AND (fecha_baja >= @fecha_actual OR fecha_baja IS NULL)
     )
     BEGIN
         RAISERROR('El socio ya está inscrito en esta actividad.', 16, 1);
@@ -728,7 +731,7 @@ BEGIN
     VALUES (
         @id_socio,
         @id_actividad_deportiva,
-        GETDATE(),
+        @fecha_actual,
 		NULL
 		);
 
