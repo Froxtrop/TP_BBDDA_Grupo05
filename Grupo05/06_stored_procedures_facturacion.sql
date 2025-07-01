@@ -343,7 +343,8 @@ Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.generar_factura_recreativa_invitado_sp
     @id_persona INT, -- Invitado
-	@id_inscripcion_rec INT -- Actividad a la cual el socio esta incripto y lo invito
+	@id_inscripcion_rec INT, -- Actividad a la cual el socio esta incripto y lo invito
+	@id_factura INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -362,7 +363,6 @@ BEGIN
     END
 
 	DECLARE @fecha_actual DATE = GETDATE(),
-			@id_factura INT,
 			@monto_recreativa DECIMAL(10,2) = 0;
 
 	BEGIN TRANSACTION Tran1
