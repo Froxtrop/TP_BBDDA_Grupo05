@@ -585,6 +585,7 @@ BEGIN
 		id_socio INT NOT NULL,
 		id_factura INT NOT NULL,
 		monto DECIMAL(10,2) NOT NULL,
+		ya_aplicada BIT DEFAULT 0,
 		CONSTRAINT fk_Morosidad_id_socio FOREIGN KEY (id_socio) REFERENCES socios.Socio(id_socio),
 		CONSTRAINT fk_Morosidad_id_factura FOREIGN KEY (id_factura) REFERENCES socios.Factura(id_factura)
 	);

@@ -146,12 +146,35 @@ BEGIN
 		BEGIN;
 			SET @monto_deportiva = @monto_deportiva * 0.9;
 		END;
+
 		SET @monto_neto = @monto_neto + ISNULL(@monto_deportiva, 0);
 
 		-- Finalmente actualizamos los registros
 		UPDATE socios.Membresia 
 			SET total_bruto = @monto_bruto, total_neto = @monto_neto
 			WHERE id_membresia = @id_membresia;
+
+		DECLARE @monto_moroso DECIMAL(10,2);
+		IF EXISTS (
+			SELECT 1 FROM socios.Morosidad M
+				JOIN socios.Factura F 
+					ON F.id_factura = M.id_factura
+			WHERE MONTH(F.fecha_emision) < MONTH(GETDATE())
+				AND M.ya_aplicada = 0
+		)
+		BEGIN
+			DECLARE @id_morosidad INT;
+			SELECT @monto_moroso = M.monto, @id_morosidad = M.id_morosidad FROM socios.Morosidad M
+					JOIN socios.Factura F 
+						ON F.id_factura = M.id_factura
+				WHERE MONTH(F.fecha_emision) < MONTH(GETDATE())
+					AND M.ya_aplicada = 0
+			SET @monto_bruto += @monto_moroso;
+			SET @monto_neto += @monto_moroso;
+			UPDATE socios.Morosidad
+				SET ya_aplicada = 1
+				WHERE id_morosidad = @id_morosidad;
+		END
 
 		UPDATE socios.Factura 
 			SET total_bruto = @monto_bruto, total_neto = @monto_neto
