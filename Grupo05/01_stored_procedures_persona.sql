@@ -103,7 +103,7 @@ BEGIN
         RETURN;
     END
 
-    -- Validación: Email básico
+	-- Validación: Email básico
     IF @email IS NOT NULL AND @email NOT LIKE '%@%.%'
     BEGIN
         RAISERROR('[Error] socios.registrar_persona_sp: El email ingresado no es válido.', 16, 1);

@@ -327,11 +327,11 @@ CREATE OR ALTER PROCEDURE socios.registrar_inscripcion_menor_sp
     @telefono_emergencia VARCHAR(50) = NULL,
 
     -- Datos del responsable
-    @nombre_resp VARCHAR(50),
-    @apellido_resp VARCHAR(50),
-    @dni_resp INT,
+    @nombre_resp VARCHAR(50) = NULL,
+    @apellido_resp VARCHAR(50) = NULL,
+    @dni_resp INT = NULL,
     @email_resp VARCHAR(255) = NULL,
-    @fecha_nac_resp DATE,
+    @fecha_nac_resp DATE = NULL,
     @telefono_resp VARCHAR(50) = NULL,
 
     -- Output
@@ -363,6 +363,18 @@ BEGIN
 
     DECLARE @id_categoria SMALLINT = socios.fn_obtener_categoria_por_edad(@edad_menor);
 
+	IF NOT EXISTS (
+		SELECT 1 FROM socios.Persona
+			WHERE id_persona = @id_persona_resp
+		)
+	BEGIN 
+		-- Registrar responsable
+		EXEC socios.registrar_persona_sp
+			@nombre_resp, @apellido_resp, @dni_resp, @email_resp, @fecha_nac_resp, @telefono_resp, 0, @id_persona_resp OUTPUT;
+
+		IF @id_persona_resp IS NULL RETURN;
+	END
+
     -- Registrar menor
     EXEC socios.registrar_persona_sp
         @nombre_menor, @apellido_menor, @dni_menor, @email_menor, @fecha_nac_menor, @telefono_menor, 0, @id_persona_menor OUTPUT;
@@ -373,12 +385,6 @@ BEGIN
         @id_persona_menor, @id_categoria, @obra_social, @nro_obra_social, @telefono_emergencia, @id_socio_menor OUTPUT;
 
     IF @id_socio_menor IS NULL RETURN;
-
-    -- Registrar responsable
-    EXEC socios.registrar_persona_sp
-        @nombre_resp, @apellido_resp, @dni_resp, @email_resp, @fecha_nac_resp, @telefono_resp, 0, @id_persona_resp OUTPUT;
-
-    IF @id_persona_resp IS NULL RETURN;
 
     INSERT INTO socios.Parentesco (id_persona, id_persona_responsable, parentesco, fecha_desde, fecha_hasta)
     VALUES (@id_persona_menor, @id_persona_resp, @parentesco, GETDATE(), DATEADD(YEAR, 18, @fecha_nac_menor));

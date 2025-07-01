@@ -34,7 +34,8 @@ Descripción: Realiza la facturación de la membresía de un socio.
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.facturacion_membresia_socio_sp
-    @id_socio INT
+    @id_socio INT,
+	@id_factura INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -47,17 +48,15 @@ BEGIN
     END
 
 	DECLARE @fecha_actual DATE = GETDATE(),
-			@id_factura INT,
 			@id_membresia INT,
 			@monto_categoria DECIMAL(10,2) = 0,
 			@cantidad_act_dep INT = 0,
 			@monto_deportiva DECIMAL(10,2) = 0,
-			@es_grupo_familiar BIT = 0,
 			@monto_bruto DECIMAL(10,2) = 0,
 			@monto_neto DECIMAL(10,2) = 0;
 
 	-- Calculamos primer dia del mes
-	DECLARE @primer_dia_mes DATE = DATEFROMPARTS(YEAR(@fecha_actual), 1, 1);
+	DECLARE @primer_dia_mes DATE = DATEFROMPARTS(YEAR(@fecha_actual),MONTH(@fecha_actual), 1);
 
 	BEGIN TRANSACTION Tran1
 	BEGIN TRY
@@ -84,11 +83,28 @@ BEGIN
 		/* Buscamos si el socio pertenece a un grupo familiar, de ser asi
 		aplicamos un descuento del 15% en el total de la facturación de membresía*/
 		IF EXISTS (
-			SELECT 1 FROM socios.Parentesco par
-			INNER JOIN socios.Socio s ON par.id_persona = s.id_persona 
-				OR par.id_persona_responsable = s.id_persona
-			WHERE s.id_socio = @id_socio
-			AND (par.fecha_hasta >= @primer_dia_mes OR par.fecha_hasta IS NULL)
+
+			SELECT 1
+			FROM socios.Parentesco par
+			JOIN socios.Socio s1 ON par.id_persona = s1.id_persona
+			JOIN socios.Socio s2 ON par.id_persona_responsable = s2.id_persona
+			WHERE (s1.id_socio = @id_socio OR s2.id_socio = @id_socio)
+			  AND (par.fecha_hasta >= GETDATE() OR par.fecha_hasta IS NULL)
+
+			UNION
+
+		    SELECT 1
+			FROM socios.Parentesco p1
+			JOIN socios.Parentesco p2 
+				ON p1.id_persona_responsable = p2.id_persona_responsable
+			   AND p1.id_persona <> p2.id_persona
+			   AND (
+					(ISNULL(p1.fecha_hasta, GETDATE()) >= GETDATE() AND p1.fecha_desde <= GETDATE()) AND
+					(ISNULL(p2.fecha_hasta, GETDATE()) >= GETDATE() AND p2.fecha_desde <= GETDATE())
+			   )
+			JOIN socios.Socio s1 ON s1.id_persona = p1.id_persona
+			JOIN socios.Socio s2 ON s2.id_persona = p2.id_persona
+			WHERE @id_socio IN (s1.id_socio, s2.id_socio)
 		)
 		BEGIN;
 			SET @monto_categoria = @monto_categoria * 0.85;
@@ -123,14 +139,14 @@ BEGIN
 				AND tad.vigente_desde <= @fecha_actual AND
 					(tad.vigente_hasta >= @primer_dia_mes OR tad.vigente_hasta IS NULL)
 		
-		SET @monto_bruto = @monto_bruto + @monto_deportiva;
+		SET @monto_bruto = @monto_bruto + ISNULL(@monto_deportiva, 0);
 
 		-- Aplicamos descuento del 10% sobre el total de las actividades deportivas si se realizan varias
 		IF @cantidad_act_dep > 1
 		BEGIN;
 			SET @monto_deportiva = @monto_deportiva * 0.9;
 		END;
-		SET @monto_neto = @monto_neto + @monto_deportiva;
+		SET @monto_neto = @monto_neto + ISNULL(@monto_deportiva, 0);
 
 		-- Finalmente actualizamos los registros
 		UPDATE socios.Membresia 
@@ -221,7 +237,7 @@ BEGIN
 			@monto_recreativa DECIMAL(10,2) = 0;
 
 	-- Calculamos primer dia del mes
-	DECLARE @primer_dia_mes DATE = DATEFROMPARTS(YEAR(@fecha_actual), 1, 1);
+	DECLARE @primer_dia_mes DATE = DATEFROMPARTS(YEAR(@fecha_actual),MONTH(@fecha_actual), 1);
 
 	BEGIN TRANSACTION Tran1
 	BEGIN TRY

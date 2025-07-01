@@ -17,111 +17,480 @@
 RAISERROR('Este script no está pensado para ejecutarse "de una" con F5. Seleccioná y ejecutá de a poco.', 16, 1);
 GO
 
--- Usamos la base de datos del proyecto
 USE Com2900G05
 GO
 
-/* Isertar persona */
--- Seleccionar desde acá
-DECLARE @id_persona_res INT;
-EXEC socios.registrar_persona_sp
-	'Juansito', -- nombre
-	'Perez', -- apellido
-	24710888, -- DNI
-	'juanperez@prueba.com', -- email
-	'1974-03-04', -- fecha_de_nacimiento
-	'1144445555', -- telefono
-	0, -- saldo
-	@id_persona = @id_persona_res OUTPUT
-SELECT @id_persona_res as id_persona;
+-- EN CASO DE NO HABER EJECUTADO INSERCIÓN CON DATOS DE TARIFAS ACTUALES, REALIZAR ESTA EJECUCIÓN
+-- Desde acá
+INSERT INTO socios.TarifaCategoria (valor, vigencia_desde, vigencia_hasta, id_categoria)
+VALUES (30500, '2025-06-01', '2025-12-31', 3),
+	   (20500, '2025-06-01', '2025-12-31', 2),
+	   (10500, '2025-06-01', '2025-12-31', 1);
+
+INSERT INTO socios.TarifaActividadDeportiva(id_actividad_dep, vigente_desde, vigente_hasta, valor)
+VALUES (1, '2025-07-01', '2025-12-31', 10000),
+	   (2, '2025-07-01', '2025-12-31', 30000),
+	   (3, '2025-07-01', '2025-12-31', 25000),
+	   (4, '2025-07-01', '2025-12-31', 30000),
+	   (5, '2025-07-01', '2025-12-31', 45000),
+	   (6, '2025-07-01', '2025-12-31', 2000)
+
+-- Hasta acá
+SELECT * FROM socios.TarifaCategoria
+
+
+
+DELETE FROM socios.Socio;
+DELETE FROM socios.Parentesco;
+DELETE FROM socios.Persona;
+
+USE Com2900G05
+GO
+-- Desde acá
+-- Socio menor con adulto responsable a cargo que no es socio:
+DECLARE @id_persona_menor_solo INT,
+		@id_socio_menor_solo INT,
+		@id_persona_resp_menor_solo INT;
+EXEC socios.registrar_inscripcion_menor_sp
+    @nombre_menor = 'Lucio',
+    @apellido_menor = 'Franco',
+    @dni_menor = 44111222,
+    @email_menor = 'luciofranco@example.com',
+    @fecha_nac_menor = '2010-04-01',
+    @telefono_menor = '011-9999-8888',
+    @obra_social = 'Galeno',
+    @nro_obra_social = 456789,
+    @telefono_emergencia = '011-3344-5566',
+    @nombre_resp = 'Mario',
+    @apellido_resp = 'Franco',
+    @dni_resp = 22333444,
+    @email_resp = 'mariofranco@example.com',
+    @fecha_nac_resp = '1980-05-01',
+    @telefono_resp = '011-1234-5678',
+    @parentesco = 'P',
+    @id_persona_menor = @id_persona_menor_solo OUTPUT,
+    @id_socio_menor = @id_socio_menor_solo OUTPUT,
+    @id_persona_resp = @id_persona_resp_menor_solo OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_solo AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_solo AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Responsable registrado con ID = ' + CAST(@id_persona_resp_menor_solo AS VARCHAR);
+
+DECLARE @id_factura_socio_menor INT;
+EXEC socios.facturacion_membresia_socio_sp  
+	@id_socio = @id_socio_menor_solo,
+	@id_factura = @id_factura_socio_menor OUTPUT;
+SELECT * FROM socios.Factura
 -- Hasta acá
 
--- Revisamos la tabla
-SELECT * FROM socios.Persona
 
-/* Registrar socio */
+-- Socio mayor responsable de sí mismo:
+-- Desde acá
+DECLARE @id_persona_mayor_solo INT, @id_socio_mayor_solo INT;
+EXEC socios.inscripcion_socio_sp
+    @nombre = 'Carla',
+    @apellido = 'Domínguez',
+    @dni = 31234567,
+    @email = 'carladom@example.com',
+    @fecha_de_nacimiento = '2000-05-15',
+    @telefono = '011-2233-4455',
+    @obra_social = 'OSDE',
+    @nro_obra_social = 556677,
+    @telefono_emergencia = '011-8877-6655',
+    @id_persona = @id_persona_mayor_solo OUTPUT,
+    @id_socio = @id_socio_mayor_solo OUTPUT;
+PRINT '[Éxito] [inscripcion_socio_sp]: Persona registrada con ID = ' + CAST(@id_persona_mayor_solo AS VARCHAR);
+PRINT '[Éxito] [inscripcion_socio_sp]: Socio generado con ID = ' + CAST(@id_socio_mayor_solo AS VARCHAR);
 
--- Ejecutar desde acá
-DECLARE @id_socio_res INT;
-DECLARE @id_categoria SMALLINT = 
-	socios.fn_obtener_categoria_por_edad(socios.fn_obtener_edad_por_fnac('1974-03-04'));
-EXEC socios.registrar_socio_sp
-	3, -- id_persona INT
-    @id_categoria, --id_categoria SMALLINT,
-    'PAMI', --@obra_social VARCHAR(100) = NULL,
-    141451, -- @nro_obra_social INT = NULL,
-    '1139834893', --@telefono_emergencia VARCHAR(50) = NULL,
-    @id_socio = @id_socio_res OUTPUT;
-SELECT @id_socio_res as id_socio;
+DECLARE @id_factura_socio_mayor_solo INT;
+
+EXEC socios.facturacion_membresia_socio_sp  
+	@id_socio = @id_socio_mayor_solo,
+	@id_factura = @id_factura_socio_mayor_solo OUTPUT;
+
+SELECT * FROM socios.Factura
+	WHERE id_factura = @id_factura_socio_mayor_solo
 -- Hasta acá
 
-SELECT * FROM socios.Socio
 
-/** Inscripcion a actividades deportivas **/
-SELECT * FROM socios.ActividadDeportiva
+-- Desde acá
+-- Socio mayor a cargo de un socio menor
+DECLARE @id_persona_mayor_resp_solo INT, -- id de la persona mayor resp de UN solo socio menor
+		@id_socio_mayor_resp_solo INT, -- id de socio mayor resp de UN solo socio menor
+		@id_persona_menor_de_resp_solo INT,  -- id de la persona menor a cargo de un resp
+		@id_socio_menor_de_resp_solo INT; -- id de socio menor a cargo de un resp
 
-EXEC socios.inscribir_socio_a_actividad_dep_sp
-	1, -- id_socio
-	2 -- id_actividad_deportiva
+EXEC socios.inscripcion_socio_sp -- PERSONA MAYOR
+    @nombre = 'Christian',
+    @apellido = 'Gray',
+    @dni = 9122018,
+    @email = 'soyprofe@example.com',
+    @fecha_de_nacimiento = '2000-05-15',
+    @telefono = '011-2233-4455',
+    @obra_social = 'OSDE',
+    @nro_obra_social = 556677,
+    @telefono_emergencia = '011-8877-6655',
+    @id_persona = @id_persona_mayor_resp_solo OUTPUT,
+    @id_socio = @id_socio_mayor_resp_solo OUTPUT;
+PRINT '[Éxito] [inscripcion_socio_sp]: Persona registrada con ID = ' + CAST(@id_persona_mayor_resp_solo AS VARCHAR);
+PRINT '[Éxito] [inscripcion_socio_sp]: Socio generado con ID = ' + CAST(@id_socio_mayor_resp_solo AS VARCHAR);
 
-SELECT * FROM socios.InscripcionActividadDeportiva
+EXEC socios.registrar_inscripcion_menor_sp
+    @nombre_menor = 'Mateo',
+    @apellido_menor = 'Morinigo',
+    @dni_menor = 88653926,
+    @email_menor = 'morimate@example.com',
+    @fecha_nac_menor = '2010-04-01',
+    @telefono_menor = '011-9999-8888',
+    @obra_social = 'Galeno',
+    @nro_obra_social = 456789,
+    @telefono_emergencia = '011-3344-5566',
+    @parentesco = 'P',
+    @id_persona_menor = @id_persona_menor_de_resp_solo OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_solo OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_solo OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_solo AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_solo AS VARCHAR);
 
-/** Cargar asistencia a actividades deportivas **/
-EXEC socios.asistencia_socio_a_actividad_dep_sp
-	1, -- id_socio
-	2, -- id_actividad_rec
-	'2025-07-08', -- fecha clase
-	'A', -- asistencia
-	'Ramiro Gomez', -- profesor
-	'ramirogomez@prueba.com' -- email profesor
+DECLARE @id_factura_socio_mayor_resp_solo INT, -- Factura de Socio Mayor
+		@id_factura_socio_menor_de_resp_solo INT; -- Factura de Socio Menor
 
-SELECT * FROM socios.AsistenciaActividadDeportiva
+EXEC socios.facturacion_membresia_socio_sp -- Facturacion del Socio Menor
+	@id_socio = @id_socio_menor_de_resp_solo,
+	@id_factura = @id_factura_socio_menor_de_resp_solo OUTPUT;
 
-/** Baja Inscripcion a actividades deportivas **/
-EXEC socios.baja_inscripcion_actividad_dep_sp
-	1 -- id_inscripcion_deportiva
-	
+EXEC socios.facturacion_membresia_socio_sp -- Facturacion del Socio Mayor
+	@id_socio = @id_socio_mayor_resp_solo,
+	@id_factura = @id_factura_socio_mayor_resp_solo OUTPUT;
 
-SELECT * FROM socios.InscripcionActividadDeportiva
+-- Demostración
+SELECT F.*, P.id_persona as ID_Resp, (P.nombre+' '+P.apellido) as Responsable FROM socios.Factura F
+	JOIN socios.FacturaResponsable R
+		ON F.id_factura = R.id_factura
+	JOIN socios.Persona P
+		ON P.id_persona = R.id_persona
+WHERE F.id_factura = @id_factura_socio_menor_de_resp_solo
+	OR F.id_factura = @id_factura_socio_mayor_resp_solo
+-- Hasta acá
 
-/** Inscripcion a actividades recreativas **/
-SELECT * FROM socios.ActividadRecreativa
 
-EXEC socios.inscribir_socio_a_actividad_rec_sp
-	1, -- id_socio
-	2, -- id_actividad_rec
-	'Día' -- modalidad
+-- Desde acá
+-- Tres socios menores y un responsable que no es socio
+DECLARE @id_persona_mayor_resp_de_3 INT, -- id de la persona mayor resp de 3 socios menor
+		@id_persona_menor_de_resp_1 INT,  -- id de la persona1 menor a cargo de un resp
+		@id_socio_menor_de_resp_1 INT, -- id de socio1 menor a cargo de un resp
+		@id_persona_menor_de_resp_2 INT,  -- id de la persona2 menor a cargo de un resp
+		@id_socio_menor_de_resp_2 INT, -- id de socio2 menor a cargo de un resp
+		@id_persona_menor_de_resp_3 INT,  -- id de la persona3 menor a cargo de un resp
+		@id_socio_menor_de_resp_3 INT; -- id de socio3 menor a cargo de un resp
 
-SELECT * FROM socios.InscripcionActividadRecreativa
+EXEC socios.registrar_persona_sp -- MAYOR
+    @nombre = 'Valeria',
+    @apellido = 'Pilar',
+    @dni = 12345678,
+    @email = 'valeriapilar@example.com',
+    @fecha_de_nacimiento = '1985-04-20',
+    @telefono = '011-1234-5678',
+    @saldo = 0,
+    @id_persona = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_persona_sp]: ID de persona insertada = ' + CAST(@id_persona_mayor_resp_de_3 AS VARCHAR);
 
-/** Cargar asistencia actividad recreativva **/
-EXEC socios.asistencia_socio_a_actividad_rec_sp
-	1, -- id_socio
-	2, -- id_actividad_rec
-	'2025-06-29' -- fecha de asistencia
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 1
+    @nombre_menor = 'Valentina',
+    @apellido_menor = 'Benitez',
+    @dni_menor = 44999888,
+    @email_menor = 'valentinapilar@example.com',
+    @fecha_nac_menor = '2011-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'M',
+    @id_persona_menor = @id_persona_menor_de_resp_1 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_1 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_1 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_1 AS VARCHAR);
 
--- Actividad a la que no se inscribió prueba de validacion
-EXEC socios.asistencia_socio_a_actividad_rec_sp
-	1, -- id_socio
-	1, -- id_actividad_rec
-	'2025-06-29' -- fecha de asistencia
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 2
+    @nombre_menor = 'Agustina',
+    @apellido_menor = 'Benitez',
+    @dni_menor = 44999887,
+    @email_menor = 'agustinapilar@example.com',
+    @fecha_nac_menor = '2011-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'M',
+    @id_persona_menor = @id_persona_menor_de_resp_2 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_2 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_2 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_2 AS VARCHAR);
 
--- Actividad que no existe
-EXEC socios.asistencia_socio_a_actividad_rec_sp
-	1, -- id_socio
-	20, -- id_actividad_rec
-	'2025-06-29' -- fecha de asistencia
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 3
+    @nombre_menor = 'Tamara',
+    @apellido_menor = 'Benitez',
+    @dni_menor = 44999889,
+    @email_menor = 'tamaraapilar@example.com',
+    @fecha_nac_menor = '2011-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'M',
+    @id_persona_menor = @id_persona_menor_de_resp_3 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_3 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_3 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_3 AS VARCHAR);
 
--- Socio inexistente
-EXEC socios.asistencia_socio_a_actividad_rec_sp
-	1912389, -- id_socio
-	2, -- id_actividad_rec
-	'2025-06-29' -- fecha de asistencia
+DECLARE @id_factura_socio_menor_de_resp_1 INT,
+		@id_factura_socio_menor_de_resp_2 INT,
+		@id_factura_socio_menor_de_resp_3 INT;
 
-SELECT * FROM socios.AsistenciaActividadRecreativa
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_1,
+	@id_factura = @id_factura_socio_menor_de_resp_1 OUTPUT;
 
-/** Baja Inscripcion a actividades recreativas **/
-EXEC socios.baja_inscripcion_actividad_rec_sp
-	4 -- id_inscripcion_recreativa
-	
-SELECT * FROM socios.InscripcionActividadRecreativa
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_2,
+	@id_factura = @id_factura_socio_menor_de_resp_2 OUTPUT;
+
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_3,
+	@id_factura = @id_factura_socio_menor_de_resp_3 OUTPUT;
+
+-- Demostración
+SELECT F.*, P.id_persona as ID_Resp, (P.nombre+' '+P.apellido) as Responsable FROM socios.Factura F
+	JOIN socios.FacturaResponsable R
+		ON F.id_factura = R.id_factura
+	JOIN socios.Persona P
+		ON P.id_persona = R.id_persona
+WHERE F.id_factura in (@id_factura_socio_menor_de_resp_1, @id_factura_socio_menor_de_resp_2, @id_factura_socio_menor_de_resp_3);
+-- Hasta acá
+
+-- Desde acá
+-- Tres socios menores y un responsable socio
+DECLARE @id_persona_mayor_resp_de_3 INT, -- id de la persona mayor resp de 3 socios menor
+		@id_socio_mayor_resp_de_3 INT, -- id de socio mayor resp de 3 socios menor
+		@id_persona_menor_de_resp_1 INT,  -- id de la persona1 menor a cargo de un resp
+		@id_socio_menor_de_resp_1 INT, -- id de socio1 menor a cargo de un resp
+		@id_persona_menor_de_resp_2 INT,  -- id de la persona2 menor a cargo de un resp
+		@id_socio_menor_de_resp_2 INT, -- id de socio2 menor a cargo de un resp
+		@id_persona_menor_de_resp_3 INT,  -- id de la persona3 menor a cargo de un resp
+		@id_socio_menor_de_resp_3 INT; -- id de socio3 menor a cargo de un resp
+		
+EXEC socios.inscripcion_socio_sp -- MAYOR
+    @nombre = 'Marcelo',
+    @apellido = 'Gallardo',
+    @dni = 11111111,
+    @email = 'madrid912@example.com',
+    @fecha_de_nacimiento = '1989-05-15',
+    @telefono = '011-2233-4455',
+    @obra_social = 'OSDE',
+    @nro_obra_social = 556677,
+    @telefono_emergencia = '011-8877-6655',
+    @id_persona = @id_persona_mayor_resp_de_3 OUTPUT,
+    @id_socio = @id_socio_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [inscripcion_socio_sp]: Persona registrada con ID = ' + CAST(@id_persona_mayor_resp_de_3 AS VARCHAR);
+PRINT '[Éxito] [inscripcion_socio_sp]: Socio generado con ID = ' + CAST(@id_persona_mayor_resp_de_3 AS VARCHAR);
+
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 1
+    @nombre_menor = 'Carlos',
+    @apellido_menor = 'Gallardo',
+    @dni_menor = 45536297,
+    @email_menor = 'tefuistealab@example.com',
+    @fecha_nac_menor = '2015-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'P',
+    @id_persona_menor = @id_persona_menor_de_resp_1 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_1 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_1 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_1 AS VARCHAR);
+
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 2
+    @nombre_menor = 'Agustina',
+    @apellido_menor = 'Gallardo',
+    @dni_menor = 44586325,
+    @email_menor = 'aguss@example.com',
+    @fecha_nac_menor = '2011-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'P',
+    @id_persona_menor = @id_persona_menor_de_resp_2 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_2 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_2 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_2 AS VARCHAR);
+
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 3
+    @nombre_menor = 'Juan Roman',
+    @apellido_menor = 'Gallardo',
+    @dni_menor = 77777777,
+    @email_menor = 'jjr@example.com',
+    @fecha_nac_menor = '2012-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'P',
+    @id_persona_menor = @id_persona_menor_de_resp_3 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_3 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_3 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_3 AS VARCHAR);
+
+DECLARE @id_factura_socio_mayor_resp_3 INT,
+		@id_factura_socio_menor_de_resp_1 INT,
+		@id_factura_socio_menor_de_resp_2 INT,
+		@id_factura_socio_menor_de_resp_3 INT;
+
+EXEC socios.facturacion_membresia_socio_sp -- Facturacion del Socio Mayor
+	@id_socio = @id_socio_mayor_resp_de_3,
+	@id_factura = @id_factura_socio_mayor_resp_3 OUTPUT;
+
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_1,
+	@id_factura = @id_factura_socio_menor_de_resp_1 OUTPUT;
+
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_2,
+	@id_factura = @id_factura_socio_menor_de_resp_2 OUTPUT;
+
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_3,
+	@id_factura = @id_factura_socio_menor_de_resp_3 OUTPUT;
+
+-- Demostración
+SELECT F.*, P.id_persona as ID_Resp, (P.nombre+' '+P.apellido) as Responsable FROM socios.Factura F
+	JOIN socios.FacturaResponsable R
+		ON F.id_factura = R.id_factura
+	JOIN socios.Persona P
+		ON P.id_persona = R.id_persona
+WHERE F.id_factura in (@id_factura_socio_mayor_resp_3,
+					   @id_factura_socio_menor_de_resp_1,
+					   @id_factura_socio_menor_de_resp_2,
+					   @id_factura_socio_menor_de_resp_3);
+-- Hasta acá
+
+-- SI ALGUNO DE LOS SOCIOS ESTA INSCRIPTO A ALGUNA ACTIVIDAD:
+-- Desde acá
+-- Tres socios menores, uno en una actividad y otro en más de una, y un responsable que no es socio
+DECLARE @id_persona_mayor_resp_de_3 INT, -- id de la persona mayor resp de 3 socios menor
+		@id_persona_menor_de_resp_1 INT,  -- id de la persona1 menor a cargo de un resp
+		@id_socio_menor_de_resp_1 INT, -- id de socio1 menor a cargo de un resp
+		@id_persona_menor_de_resp_2 INT,  -- id de la persona2 menor a cargo de un resp
+		@id_socio_menor_de_resp_2 INT, -- id de socio2 menor a cargo de un resp
+		@id_persona_menor_de_resp_3 INT,  -- id de la persona3 menor a cargo de un resp
+		@id_socio_menor_de_resp_3 INT; -- id de socio3 menor a cargo de un resp
+
+EXEC socios.registrar_persona_sp -- MAYOR
+    @nombre = 'Valeria',
+    @apellido = 'Pilar',
+    @dni = 12345678,
+    @email = 'valeriapilar@example.com',
+    @fecha_de_nacimiento = '1985-04-20',
+    @telefono = '011-1234-5678',
+    @saldo = 0,
+    @id_persona = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_persona_sp]: ID de persona insertada = ' + CAST(@id_persona_mayor_resp_de_3 AS VARCHAR);
+
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 1
+    @nombre_menor = 'Valentina',
+    @apellido_menor = 'Benitez',
+    @dni_menor = 44999888,
+    @email_menor = 'valentinapilar@example.com',
+    @fecha_nac_menor = '2011-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'M',
+    @id_persona_menor = @id_persona_menor_de_resp_1 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_1 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_1 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_1 AS VARCHAR);
+
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 2
+    @nombre_menor = 'Agustina',
+    @apellido_menor = 'Benitez',
+    @dni_menor = 44999887,
+    @email_menor = 'agustinapilar@example.com',
+    @fecha_nac_menor = '2011-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'M',
+    @id_persona_menor = @id_persona_menor_de_resp_2 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_2 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_2 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_2 AS VARCHAR);
+
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 3
+    @nombre_menor = 'Tamara',
+    @apellido_menor = 'Benitez',
+    @dni_menor = 44999889,
+    @email_menor = 'tamaraapilar@example.com',
+    @fecha_nac_menor = '2011-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'M',
+    @id_persona_menor = @id_persona_menor_de_resp_3 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_3 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_3 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_3 AS VARCHAR);
+
+-- EL HIJO 3 ESTÁ EN DOS ACTIVIDADES, DEBE TENER DESCUENTO DE CANTIDAD DE ACT DEP
+EXEC socios.inscribir_socio_a_actividad_dep_sp  
+	@id_socio = @id_socio_menor_de_resp_3,
+	@id_actividad_deportiva = 2;
+
+EXEC socios.inscribir_socio_a_actividad_dep_sp  
+	@id_socio = @id_socio_menor_de_resp_3,
+	@id_actividad_deportiva = 3;
+
+-- EL HIJO 2 ESTÁ EN UNA ACTIVIDAD, NO TIENE DESCUENTO DE CANT ACT DEP
+EXEC socios.inscribir_socio_a_actividad_dep_sp  
+	@id_socio = @id_socio_menor_de_resp_2,
+	@id_actividad_deportiva = 4;
+
+DECLARE @id_factura_socio_menor_de_resp_1 INT,
+		@id_factura_socio_menor_de_resp_2 INT,
+		@id_factura_socio_menor_de_resp_3 INT;
+
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_1,
+	@id_factura = @id_factura_socio_menor_de_resp_1 OUTPUT;
+
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_2,
+	@id_factura = @id_factura_socio_menor_de_resp_2 OUTPUT;
+
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_3,
+	@id_factura = @id_factura_socio_menor_de_resp_3 OUTPUT;
+
+-- Demostración
+SELECT F.*, M.id_socio as CorrespondeA, P.id_persona as ID_Resp, (P.nombre+' '+P.apellido) as Responsable
+FROM socios.Factura F
+	JOIN socios.FacturaResponsable R
+		ON F.id_factura = R.id_factura
+	JOIN socios.Persona P
+		ON P.id_persona = R.id_persona
+	JOIN socios.Membresia M
+		ON M.id_factura = F.id_factura
+WHERE F.id_factura in (@id_factura_socio_menor_de_resp_1, @id_factura_socio_menor_de_resp_2, @id_factura_socio_menor_de_resp_3);
+-- Hasta acá
