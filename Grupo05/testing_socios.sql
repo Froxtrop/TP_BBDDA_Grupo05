@@ -57,6 +57,32 @@ SELECT @id_socio_res as id_socio;
 
 SELECT * FROM socios.Socio
 
+/** Inscripcion a actividades deportivas **/
+SELECT * FROM socios.ActividadDeportiva
+
+EXEC socios.inscribir_socio_a_actividad_dep_sp
+	1, -- id_socio
+	2 -- id_actividad_deportiva
+
+SELECT * FROM socios.InscripcionActividadDeportiva
+
+/** Cargar asistencia a actividades deportivas **/
+EXEC socios.asistencia_socio_a_actividad_dep_sp
+	1, -- id_socio
+	2, -- id_actividad_rec
+	'2025-07-08', -- fecha clase
+	'A', -- asistencia
+	'Ramiro Gomez', -- profesor
+	'ramirogomez@prueba.com' -- email profesor
+
+SELECT * FROM socios.AsistenciaActividadDeportiva
+
+/** Baja Inscripcion a actividades deportivas **/
+EXEC socios.baja_inscripcion_actividad_dep_sp
+	1 -- id_inscripcion_deportiva
+	
+
+SELECT * FROM socios.InscripcionActividadDeportiva
 
 /** Inscripcion a actividades recreativas **/
 SELECT * FROM socios.ActividadRecreativa
@@ -93,3 +119,9 @@ EXEC socios.asistencia_socio_a_actividad_rec_sp
 	'2025-06-29' -- fecha de asistencia
 
 SELECT * FROM socios.AsistenciaActividadRecreativa
+
+/** Baja Inscripcion a actividades recreativas **/
+EXEC socios.baja_inscripcion_actividad_rec_sp
+	4 -- id_inscripcion_recreativa
+	
+SELECT * FROM socios.InscripcionActividadRecreativa
