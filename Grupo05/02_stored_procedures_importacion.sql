@@ -24,7 +24,7 @@ BEGIN
     SET NOCOUNT ON;
 
     -- Tabla de Staging para reflejar el CSV.
-    IF OBJECT_ID('socios.Staging_ResponsablesPago', 'U') IS NOT NULL
+	IF OBJECT_ID('socios.Staging_ResponsablesPago', 'U') IS NOT NULL
         DROP TABLE socios.Staging_ResponsablesPago;
 
     CREATE TABLE socios.Staging_ResponsablesPago (
@@ -147,7 +147,8 @@ BEGIN
             SET IDENTITY_INSERT socios.Socio OFF;
         END
         PRINT 'Error fatal en el procedimiento: ' + ERROR_MESSAGE();
-        IF OBJECT_ID('tempdb..#TempProcess') IS NOT NULL DROP TABLE #TempProcess;
+        IF OBJECT_ID('tempdb..#TempProcess') IS NOT NULL
+			DROP TABLE #TempProcess;
     END CATCH
 END
 GO
@@ -198,7 +199,7 @@ BEGIN
     BEGIN TRY
         -- Cargar el CSV a staging
         DECLARE @sql NVARCHAR(MAX);
-        SET @sql = N'BULK INSERT socios.Staging_GrupoFamiliar FROM '''
+        SET @sql = N'BULK INSERT socios.Staging_GrupoFamiliar FROM ''' 
                    + @ruta_archivo + N''' WITH (
                        FIRSTROW = 2,
                        FIELDTERMINATOR = '';'',
@@ -212,7 +213,7 @@ BEGIN
         BEGIN
             RAISERROR('No se cargaron filas desde el archivo CSV.', 16, 1);
             RETURN;
-        END
+        END;
 
         -- Crear tabla temporal
         CREATE TABLE #TempGrupo (
@@ -229,7 +230,6 @@ BEGIN
             Obra_Social VARCHAR(255),
             Nro_Obra_Social VARCHAR(100)
         );
-
         INSERT INTO #TempGrupo
         SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS id_row, *
         FROM socios.Staging_GrupoFamiliar;
@@ -286,7 +286,7 @@ BEGIN
 
             IF @id_persona_resp IS NULL
             BEGIN
-                PRINT 'ERROR: Fila ' + CAST(@i AS VARCHAR) + '. Socio responsable no encontrado.';
+                PRINT 'ERROR: Fila ' + CAST(@i AS VARCHAR) + '. Socio responsable: ' + ISNULL(@id_socio_resp, 'NULL') + ' no encontrado.';
                 SET @i += 1; CONTINUE;
             END
 
@@ -296,7 +296,7 @@ BEGIN
 
             IF @id_categoria IS NULL
             BEGIN
-                PRINT 'ADVERTENCIA: Fila ' + CAST(@i AS VARCHAR) + ' sin categoría válida.';
+                PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Categoria no encontrada.';
                 SET @i += 1; CONTINUE;
             END
 
@@ -335,7 +335,7 @@ BEGIN
 
         SET IDENTITY_INSERT socios.Socio OFF;
 
-        DROP TABLE #TempGrupo;
+		DROP TABLE #TempGrupo;
         PRINT 'Carga de grupo familiar finalizada.';
 
     END TRY
@@ -345,11 +345,10 @@ BEGIN
             PRINT 'Error fatal, deshabilitando IDENTITY_INSERT...';
             SET IDENTITY_INSERT socios.Socio OFF;
         END
-        IF OBJECT_ID('tempdb..#TempGrupo') IS NOT NULL DROP TABLE #TempGrupo;
-        PRINT 'Error fatal: ' + ERROR_MESSAGE();
     END CATCH
 END
 GO
+
 
 /*
      _        _     _                  _       
@@ -380,7 +379,7 @@ BEGIN
         Nro_Socio VARCHAR(100),
         Actividad VARCHAR(255),
         Fecha_Asistencia VARCHAR(100),
-        Asistencia CHAR(1),
+        Asistencia VARCHAR(1),
         Profesor VARCHAR(100)
     );
 
@@ -417,7 +416,7 @@ BEGIN
 
         DECLARE @max INT = @@ROWCOUNT, @i INT = 1;
         DECLARE @nro_socio VARCHAR(50), @id_socio INT, @actividad VARCHAR(255), @id_actividad INT,
-                @fecha DATE, @asistencia CHAR(1), @profesor VARCHAR(50), @email_profesor VARCHAR(255),
+                @fecha DATE, @asistencia VARCHAR(1), @profesor VARCHAR(50), @email_profesor VARCHAR(255),
                 @orden INT;
 
         WHILE @i <= @max
@@ -439,7 +438,7 @@ BEGIN
 
             IF @id_socio IS NULL
             BEGIN
-                PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Nro de socio inválido.';
+                PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Nro de socio inválido. -> "' + CAST(@id_socio AS VARCHAR) + '"';
                 SET @i += 1; CONTINUE;
             END
 
@@ -455,11 +454,23 @@ BEGIN
 
             IF @fecha IS NULL
             BEGIN
-                PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Fecha de asistencia inválida.';
+                PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Fecha de asistencia inválida. -> "' + CONVERT(VARCHAR, @fecha, 103) + '"';
                 SET @i += 1; CONTINUE;
             END
 
-            SET @email_profesor = LOWER(REPLACE(REPLACE(@profesor,' ','') + '@gmail.com', ' ', ''));
+			IF LEN(@asistencia) > 1
+			BEGIN
+				PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Tipo de asistencia inválido -> "' + ISNULL(@asistencia, 'NULL') + '"';
+				SET @i += 1; CONTINUE;
+			END
+
+            DECLARE @nombre_limpio NVARCHAR(100);
+			-- Eliminar saltos de línea
+			SET @profesor = REPLACE(@profesor, CHAR(13), '');
+			SET @profesor = REPLACE(@profesor, CHAR(10), '');
+			SET @nombre_limpio = REPLACE(TRIM(@profesor), ' ', '');
+			SET @email_profesor = LOWER(@nombre_limpio + '@gmail.com');
+
 
             -- Si es la primera asistencia de ese socio en esa actividad, lo inscribimos
             IF @orden = 1

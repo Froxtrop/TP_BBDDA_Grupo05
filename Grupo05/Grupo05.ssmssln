@@ -10,7 +10,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		02_stored_procedures_importacion.sql = 02_stored_procedures_importacion.sql
 		03_set_static_values.sql = 03_set_static_values.sql
 		04_reportes.sql = 04_reportes.sql
+		05_seguridad.sql = 05_seguridad.sql
+		pruebas.sql = pruebas.sql
+		testing_facturacion.sql = testing_facturacion.sql
 		testing_reportes.sql = testing_reportes.sql
+		testing_socios.sql = testing_socios.sql
 	EndProjectSection
 EndProject
 Global
@@ -18,7 +22,7 @@ Global
 		Default|Default = Default|Default
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9066A5FC-7C38-436C-A34D-FCFB30DB8585}.Default|Default.ActiveCfg = Default
+		{8D63EAC9-F86B-4614-8E71-E39EE5FAC5CD}.Default|Default.ActiveCfg = Default
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

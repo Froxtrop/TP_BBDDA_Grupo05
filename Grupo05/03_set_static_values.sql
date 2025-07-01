@@ -2,6 +2,7 @@ USE Com2900G05;
 GO
 
 
+
 /*
 		  ____    _  _____ _____ ____  ___  ____  ___    _    
 		 / ___|  / \|_   _| ____/ ___|/ _ \|  _ \|_ _|  / \   
@@ -123,7 +124,7 @@ SELECT * FROM socios.MedioDePago
                           |_|                                                
 */
 EXEC socios.cargar_responsables_de_pago_csv_sp
-     @ruta_archivo = 'Z:\UNLAM\2DO\Base de Datos Aplicada\Responsables-de-Pago.csv'; 
+     @ruta_archivo = 'C:\Users\Usuario\Documents\Proyectos\TP_BBDDA_Grupo05\Archivos\Responsables-de-Pago.csv'; 
 GO
 SELECT * FROM socios.socio
 
@@ -139,7 +140,7 @@ SELECT * FROM socios.socio
 */
 
 EXEC socios.cargar_grupo_familiar_csv_sp
-     @ruta_archivo = 'Z:\UNLAM\2DO\Base de Datos Aplicada\Grupo-Familiar.csv'; 
+     @ruta_archivo = 'C:\Users\Usuario\Documents\Proyectos\TP_BBDDA_Grupo05\Archivos\Grupo-Familiar.csv'; 
 GO
 SELECT * FROM socios.Parentesco;
 
@@ -152,6 +153,6 @@ SELECT * FROM socios.Parentesco;
                                                
 */
 EXEC socios.cargar_asistencia_actividad_csv_sp
-	@ruta_archivo = 'Z:\UNLAM\2DO\Base de Datos Aplicada\presentismo-actividades.csv';
+	@ruta_archivo = 'C:\Users\Usuario\Documents\Proyectos\TP_BBDDA_Grupo05\Archivos\presentismo-actividades.csv';
 GO
 SELECT * FROM socios.AsistenciaActividadDeportiva;
