@@ -1627,3 +1627,68 @@ BEGIN
 		VALUES (@id_detalle_de_pago, @cuit, @razon_social);
 END
 GO
+
+/***********************************************************************
+Nombre del procedimiento: genarar_pago_a_cuenta_sp
+Descripción: Generación de un pago a cuenta.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.genarar_pago_a_cuenta_sp
+    @id_detalle_de_pago INT,
+	@motivo VARCHAR(100),
+	@monto DECIMAL(10,2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+	-- Validamos si el detalle de pago existe
+	IF NOT EXISTS (SELECT 1 FROM socios.DetalleDePago WHERE id_detalle_de_pago = @id_detalle_de_pago)
+	BEGIN
+        RAISERROR('El detalle de pago proporcionado no existe.', 16, 1);
+        RETURN;
+    END
+	-- Validamos motivo
+	IF @motivo IS NULL
+	BEGIN
+        RAISERROR('El motivo no puede ser nulo.', 16, 1);
+        RETURN;
+    END
+	-- Validamos monto
+	IF @monto IS NULL OR @monto <= 0
+	BEGIN
+        RAISERROR('El monto debe ser positivo.', 16, 1);
+        RETURN;
+    END
+
+	-- Buscamos el responsable del pago
+	DECLARE @id_persona INT;
+
+	SELECT @id_persona = fr.id_persona 
+	FROM socios.DetalleDePago ddp
+	INNER JOIN socios.Factura f ON ddp.id_factura = f.id_factura
+	INNER JOIN socios.FacturaResponsable fr ON fr.id_factura = f.id_factura
+		WHERE ddp.id_detalle_de_pago = @id_detalle_de_pago;
+
+	BEGIN TRANSACTION Tran1;
+    BEGIN TRY
+
+	-- Insertamos el registro de pago a cuenta
+	INSERT INTO socios.PagoACuenta(id_persona, id_detalle_de_pago, fecha, motivo, monto)
+		VALUES (@id_persona, @id_detalle_de_pago, GETDATE(), @motivo, @monto);
+
+	-- Le agregamos al saldo del socio el monto del pago a cuenta
+	UPDATE socios.Persona SET saldo = saldo + @monto
+		WHERE id_persona = @id_persona;
+
+	COMMIT TRANSACTION Tran1;
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION Tran1;
+
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+	END CATCH
+END
+GO

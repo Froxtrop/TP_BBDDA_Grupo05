@@ -558,6 +558,7 @@ BEGIN
 		id_detalle_de_pago INT NOT NULL,
 		fecha DATE NOT NULL,
 		motivo VARCHAR(100) NOT NULL,
+		monto DECIMAL(10,2) NOT NULL,
 		CONSTRAINT fk_PagoACuenta_id_persona FOREIGN KEY (id_persona) REFERENCES socios.Persona(id_persona),
 		CONSTRAINT fk_PagoACuenta_id_detalle_de_pago FOREIGN KEY (id_detalle_de_pago) REFERENCES socios.DetalleDePago(id_detalle_de_pago)
 	);
