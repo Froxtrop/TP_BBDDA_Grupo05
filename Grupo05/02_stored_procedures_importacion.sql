@@ -1,3 +1,18 @@
+/***********************************************************************
+ * Enunciado: Entrega 5, importación de archivos maestros.
+ *
+ * Fecha de entrega: 01/07/2025
+ *
+ * Número de comisión: 2900
+ * Número de grupo: 05
+ * Materia: Bases de datos aplicada
+ *
+ * Integrantes:
+ *		- 44689109 | Crego, Agustina
+ *		- 44510837 | Crotti, Tomás
+ *		- 44792728 | Hoffmann, Francisco Gabriel
+ *
+ ***********************************************************************/
 USE Com2900G05
 GO
 
