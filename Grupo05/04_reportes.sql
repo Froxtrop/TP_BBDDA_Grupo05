@@ -143,17 +143,21 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-	SELECT p.nombre, p.apellido, socios.fn_obtener_edad_por_fnac(p.fecha_de_nacimiento) as edad,
-		c.nombre as categoria, ad.nombre as actividad_deportiva,
-		COUNT(p.nombre) OVER (PARTITION BY s.id_socio) as ausencias
-	FROM [socios].[InscripcionActividadDeportiva] i
-		INNER JOIN [socios].[ActividadDeportiva] ad ON i.id_actividad_dep = ad.id_actividad_dep
-		INNER JOIN [socios].[AsistenciaActividadDeportiva] asis ON i.id_socio = asis.id_socio 
-			AND i.id_actividad_dep = asis.id_actividad_dep
-		INNER JOIN [socios].[Socio] s ON i.id_socio = s.id_socio
+	WITH NuncaAsistio AS (
+		SELECT DISTINCT asis.id_socio, asis.id_actividad_dep
+		FROM [socios].[AsistenciaActividadDeportiva] asis
+		INNER JOIN [socios].[InscripcionActividadDeportiva] iad ON asis.id_actividad_dep = iad.id_actividad_dep
+		WHERE iad.fecha_baja IS NULL
+		GROUP BY asis.id_socio, asis.id_actividad_dep
+		HAVING SUM(CASE WHEN asis.asistencia = 'P' THEN 1 ELSE 0 END) = 0 -- asistencias
+		AND SUM(CASE WHEN asis.asistencia = 'A' OR asis.asistencia = 'J' THEN 1 ELSE 0 END) > 0 -- inasistencias
+	)
+	SELECT DISTINCT p.nombre, p.apellido, socios.fn_obtener_edad_por_fnac(p.fecha_de_nacimiento) as edad,
+		c.nombre as categoria, ad.nombre as actividad_deportiva
+	FROM NuncaAsistio asis
+		INNER JOIN [socios].[ActividadDeportiva] ad ON asis.id_actividad_dep = ad.id_actividad_dep
+		INNER JOIN [socios].[Socio] s ON asis.id_socio = s.id_socio
 		INNER JOIN [socios].[Persona] p ON s.id_persona = p.id_persona
-		INNER JOIN [socios].[Categoria] c ON c.id_categoria = s.id_categoria
-		WHERE i.fecha_baja IS NULL
-			AND (asis.asistencia = 'A' OR asis.asistencia = 'J'); -- ausente o ausente justificado
+		INNER JOIN [socios].[Categoria] c ON c.id_categoria = s.id_categoria;
 END
 GO
