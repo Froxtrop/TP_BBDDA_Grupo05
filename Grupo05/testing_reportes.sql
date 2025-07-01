@@ -78,3 +78,17 @@ Reporte que contenga a los socios que no han asistido a alguna clase
 
 -- Prueba exitosa de ejecución del reporte 4, ejecute la siguiente línea
 EXEC reportes.reporte4;
+
+/***********************************************************************
+PRUEBA DEL PROCEDIMIENTO: socios.registrar_morosos_sp
+
+Descripción:
+Este script ejecuta el procedimiento almacenado que detecta todas las
+facturas de socios que tienen más de 6 días de antigüedad y no tienen
+un pago registrado.
+
+***********************************************************************/
+
+-- Ejecución de la prueba:
+EXEC socios.registrar_morosos_sp;
+SELECT * FROM socios.Morosidad;
