@@ -1179,6 +1179,20 @@ BEGIN
 					(tc.vigencia_hasta >= @primer_dia_mes OR tc.vigencia_hasta IS NULL);
 
 		SET @monto_bruto = @monto_bruto + @monto_categoria;
+
+		/* Buscamos si el socio pertenece a un grupo familiar, de ser asi
+		aplicamos un descuento del 15% en el total de la facturación de membresía*/
+		IF EXISTS (
+			SELECT 1 FROM socios.Parentesco par
+			INNER JOIN socios.Socio s ON par.id_persona = s.id_persona 
+				OR par.id_persona_responsable = s.id_persona
+			WHERE s.id_socio = @id_socio
+			AND (par.fecha_hasta >= @primer_dia_mes OR par.fecha_hasta IS NULL)
+		)
+		BEGIN;
+			SET @monto_categoria = @monto_categoria * 0.85;
+		END;
+
 		SET @monto_neto = @monto_neto + @monto_categoria;
 
 		/* Nos traemos las actividades deportivas a las cuales está/estuvo
@@ -1216,19 +1230,6 @@ BEGIN
 			SET @monto_deportiva = @monto_deportiva * 0.9;
 		END;
 		SET @monto_neto = @monto_neto + @monto_deportiva;
-
-		/* Buscamos si el socio pertenece a un grupo familiar, de ser asi
-		aplicamos un descuento del 15% en el total de la facturación de membresía*/
-		IF EXISTS (
-			SELECT 1 FROM socios.Parentesco par
-			INNER JOIN socios.Socio s ON par.id_persona = s.id_persona 
-				OR par.id_persona_responsable = s.id_persona
-			WHERE s.id_socio = @id_socio
-			AND (par.fecha_hasta >= @primer_dia_mes OR par.fecha_hasta IS NULL)
-		)
-		BEGIN;
-			SET @monto_neto = @monto_neto * 0.85;
-		END;
 
 		-- Finalmente actualizamos los registros
 		UPDATE socios.Membresia 
