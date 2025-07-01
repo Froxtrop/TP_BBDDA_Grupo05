@@ -119,14 +119,14 @@ BEGIN
 		HAVING SUM(CASE WHEN asis.asistencia = 'P' THEN 1 ELSE 0 END) > 0 -- asistencias
 		AND SUM(CASE WHEN asis.asistencia = 'A' OR asis.asistencia = 'J' THEN 1 ELSE 0 END) > 0 -- inasistencias
 	)
-	SELECT c.nombre as categoria, ad.nombre as actividad_deportiva,
+	SELECT DISTINCT c.nombre as categoria, ad.nombre as actividad_deportiva,
 		COUNT(s.id_socio) OVER (PARTITION BY c.id_categoria, ad.id_actividad_dep)
 		as cantidad_socios_asistencia_alternada
 	FROM AsistenciaAlternada asis
 		INNER JOIN [socios].[ActividadDeportiva] ad ON asis.id_actividad_dep = ad.id_actividad_dep
 		INNER JOIN [socios].[Socio] s ON asis.id_socio = s.id_socio
 		INNER JOIN [socios].[Categoria] c ON c.id_categoria = s.id_categoria
-		ORDER BY categoria ASC, actividad_deportiva ASC, cantidad_socios_asistencia_alternada DESC;
+		ORDER BY categoria ASC, cantidad_socios_asistencia_alternada DESC;
 END
 GO
 

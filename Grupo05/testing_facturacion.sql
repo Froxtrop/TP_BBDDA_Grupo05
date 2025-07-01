@@ -32,7 +32,14 @@ INSERT INTO socios.TarifaCategoria (valor, vigencia_desde, vigencia_hasta, id_ca
 VALUES (30000, '2025-05-31', '2025-12-31', 3),
 	   (20000, '2025-05-31', '2025-12-31', 2),
 	   (15000, '2025-05-31', '2025-12-31', 1);
-
+/*
+SELECT * FROM socios.TarifaCategoria tc 
+INNER JOIN socios.Categoria c ON c.id_categoria = tc.id_categoria
+*/
+/*
+SELECT * FROM socios.TarifaActividadDeportiva tad 
+INNER JOIN socios.ActividadDeportiva ad ON ad.id_actividad_dep = tad.id_actividad_dep
+*/
 -- Si se necesita insertar un grupo familiar actualizar datos y ejecutar
 INSERT INTO socios.Parentesco (
     id_persona_responsable,
@@ -62,6 +69,7 @@ SELECT * FROM socios.DetalleDeportiva
 SELECT * FROM socios.Membresia
 SELECT * FROM socios.Factura
 SELECT * FROM socios.FacturaResponsable
+--SELECT * FROM socios.InscripcionActividadDeportiva
 
 /* Prueba de actualizar_datos_factura_sp */
 DECLARE @id_factura INT = 10, @numero_factura INT = 19220381
@@ -72,6 +80,7 @@ EXEC socios.actualizar_datos_factura_sp @id_factura, @numero_factura;
 /* Preuba generar factura recreativa socio */
 DECLARE @id_socio INT = 1;
 EXEC socios.generar_factura_recreativa_sp @id_socio
+-- SELECT * FROM socios.DetalleRecreativa
 
 /* Pago factura */
 EXEC socios.pagar_factura_sp
