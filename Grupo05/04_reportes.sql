@@ -90,7 +90,7 @@ BEGIN
 		SUM(dd.monto) OVER (PARTITION BY MONTH(f.fecha_emision), ad.nombre) as valor_acumulado
 		FROM socios.DetalleDeportiva dd
 		INNER JOIN socios.Membresia m ON m.id_membresia = dd.id_membresia
-		INNER JOIN socios.Factura f ON f.id_factura = dd.id_membresia
+		INNER JOIN socios.Factura f ON f.id_factura = m.id_factura
 		INNER JOIN socios.DetalleDePago ddp ON ddp.id_factura = f.id_factura -- Si se cumple este inner join es que está pago
 		INNER JOIN socios.InscripcionActividadDeportiva iad ON iad.id_inscripcion_dep = dd.id_inscripcion_dep
 		INNER JOIN socios.ActividadDeportiva ad ON ad.id_actividad_dep = iad.id_actividad_dep
