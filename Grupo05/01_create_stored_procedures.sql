@@ -1697,3 +1697,80 @@ BEGIN
 	END CATCH
 END
 GO
+/***********************************************************************
+Nombre del procedimiento: socios.registrar_morosos_sp
+Descripción: Identifica las facturas de SOCIOS con una antigüedad mayor
+    a 6 días que no tengan un pago asociado y las inserta en la tabla 
+    de Morosidad. Este proceso excluye explícitamente las facturas 
+    generadas por invitados, ya que su pago es inmediato.
+    El procedimiento evita duplicar registros si ya fueron procesados.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.registrar_morosos_sp
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRANSACTION;
+    BEGIN TRY
+
+        -- CTE para encontrar el id_socio asociado a cada factura de socio.
+        -- Se excluyen las facturas de invitados.
+        WITH FacturaSocioLink AS (
+            -- Vínculo a través de la membresía (incluye cuota y actividades deportivas)
+            SELECT 
+                m.id_factura, 
+                m.id_socio
+            FROM socios.Membresia m
+
+            UNION -- Usamos UNION para combinar y eliminar duplicados
+
+            -- Vínculo a través de actividades recreativas del propio socio
+            SELECT 
+                dr.id_factura, 
+                iar.id_socio
+            FROM socios.DetalleRecreativa dr
+            INNER JOIN socios.InscripcionActividadRecreativa iar ON dr.id_inscripcion_rec = iar.id_inscripcion_rec
+        )
+        -- Insertamos en la tabla Morosidad los registros que cumplen las condiciones
+        INSERT INTO socios.Morosidad (id_factura, id_socio, monto)
+        SELECT
+            f.id_factura,
+            link.id_socio,
+            f.total_neto * 
+        FROM socios.Factura f
+        -- Nos unimos a nuestro CTE para encontrar el socio que generó la deuda
+        INNER JOIN FacturaSocioLink link ON f.id_factura = link.id_factura
+        WHERE
+            -- Condición 1: Han pasado más de 10 días desde la emisión de la factura.
+            DATEDIFF(DAY, f.fecha_emision, GETDATE()) > 10
+            -- Condición 2: La factura NO tiene un pago asociado.
+            AND NOT EXISTS (
+                SELECT 1 
+                FROM socios.DetalleDePago ddp 
+                WHERE ddp.id_factura = f.id_factura
+            )
+            -- Condición 3 (Idempotencia): La factura NO ha sido registrada como morosa previamente.
+            AND NOT EXISTS (
+                SELECT 1 
+                FROM socios.Morosidad m 
+                WHERE m.id_factura = f.id_factura
+            );
+
+        COMMIT TRANSACTION;
+
+    END TRY
+    BEGIN CATCH
+        -- Si ocurre un error, revertimos la transacción para no dejar datos a medio cargar.
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        -- Mostramos el error original para facilitar la depuración.
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH
+END
+GO
