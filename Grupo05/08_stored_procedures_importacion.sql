@@ -394,7 +394,7 @@ BEGIN
         Nro_Socio VARCHAR(100),
         Actividad VARCHAR(255),
         Fecha_Asistencia VARCHAR(100),
-        Asistencia VARCHAR(1),
+        Asistencia VARCHAR(10),
         Profesor VARCHAR(100)
     );
 
@@ -431,7 +431,7 @@ BEGIN
 
         DECLARE @max INT = @@ROWCOUNT, @i INT = 1;
         DECLARE @nro_socio VARCHAR(50), @id_socio INT, @actividad VARCHAR(255), @id_actividad INT,
-                @fecha DATE, @asistencia VARCHAR(1), @profesor VARCHAR(50), @email_profesor VARCHAR(255),
+                @fecha DATE, @asistencia VARCHAR(10), @profesor VARCHAR(50), @email_profesor VARCHAR(255),
                 @orden INT;
 
         WHILE @i <= @max
@@ -472,7 +472,7 @@ BEGIN
                 PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Fecha de asistencia inválida. -> "' + CONVERT(VARCHAR, @fecha, 103) + '"';
                 SET @i += 1; CONTINUE;
             END
-
+			
 			IF LEN(@asistencia) > 1
 			BEGIN
 				PRINT 'ERROR fila ' + CAST(@i AS VARCHAR) + ': Tipo de asistencia inválido -> "' + ISNULL(@asistencia, 'NULL') + '"';

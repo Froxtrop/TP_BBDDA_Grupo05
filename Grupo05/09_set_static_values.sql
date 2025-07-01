@@ -27,10 +27,18 @@ GO
 */
 
 -- Carga de datos en la tabla categoría
-INSERT INTO socios.Categoria (nombre, edad_min, edad_max)
-VALUES ('Menor', 0, 12),
-       ('Cadete', 13, 17),
-       ('Mayor', 18, NULL);
+IF NOT EXISTS (
+	SELECT 1 FROM socios.Categoria
+		WHERE id_categoria IN (1,2,3)
+)
+BEGIN
+	SET IDENTITY_INSERT socios.Categoria ON;
+	INSERT INTO socios.Categoria (id_categoria, nombre, edad_min, edad_max)
+	VALUES (1, 'Menor', 0, 12),
+		   (2, 'Cadete', 13, 17),
+		   (3, 'Mayor', 18, NULL);
+	SET IDENTITY_INSERT socios.Categoria OFF;
+END
 SELECT * FROM socios.Categoria
 
 -- Carga de datos en la tabla tarifa categoría
@@ -130,44 +138,3 @@ VALUES
 ('Transferencia Mercado Pago');
 
 SELECT * FROM socios.MedioDePago
-
-/*	 ___                     _            _                              _       
-	|_ _|_ __  ___  ___ _ __(_)_ __   ___(_) ___  _ __    ___  ___   ___(_) ___  
-	 | || '_ \/ __|/ __| '__| | '_ \ / __| |/ _ \| '_ \  / __|/ _ \ / __| |/ _ \ 
-	 | || | | \__ \ (__| |  | | |_) | (__| | (_) | | | | \__ \ (_) | (__| | (_) |
-	|___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| |___/\___/ \___|_|\___/ 
-                          |_|                                                
-*/
-EXEC socios.cargar_responsables_de_pago_csv_sp
-     @ruta_archivo = 'C:\Users\Usuario\Documents\Proyectos\TP_BBDDA_Grupo05\Archivos\Responsables-de-Pago.csv'; 
-GO
-SELECT * FROM socios.socio
-
-/*		 ___                     _            _                              _       
-		|_ _|_ __  ___  ___ _ __(_)_ __   ___(_) ___  _ __    ___  ___   ___(_) ___  
-		 | || '_ \/ __|/ __| '__| | '_ \ / __| |/ _ \| '_ \  / __|/ _ \ / __| |/ _ \ 
-		 | || | | \__ \ (__| |  | | |_) | (__| | (_) | | | | \__ \ (_) | (__| | (_) |
-		|___|_| |_|___/\___|_|  |_| .__/ \___|_|\___/|_| |_| |___/\___/ \___|_|\___/ 
-		 _ __ ___   ___ _ __   ___|_| __                                             
-		| '_ ` _ \ / _ \ '_ \ / _ \| '__|                                            
-		| | | | | |  __/ | | | (_) | |                                               
-		|_| |_| |_|\___|_| |_|\___/|_|                                               
-*/
-
-EXEC socios.cargar_grupo_familiar_csv_sp
-     @ruta_archivo = 'C:\Users\Usuario\Documents\Proyectos\TP_BBDDA_Grupo05\Archivos\Grupo-Familiar.csv'; 
-GO
-SELECT * FROM socios.Parentesco;
-
-/*
-     _        _     _                  _       
-    / \   ___(_)___| |_ ___ _ __   ___(_) __ _ 
-   / _ \ / __| / __| __/ _ \ '_ \ / __| |/ _` |
-  / ___ \\__ \ \__ \ ||  __/ | | | (__| | (_| |
- /_/   \_\___/_|___/\__\___|_| |_|\___|_|\__,_|
-                                               
-*/
-EXEC socios.cargar_asistencia_actividad_csv_sp
-	@ruta_archivo = 'C:\Users\Usuario\Documents\Proyectos\TP_BBDDA_Grupo05\Archivos\presentismo-actividades.csv';
-GO
-SELECT * FROM socios.AsistenciaActividadDeportiva;
