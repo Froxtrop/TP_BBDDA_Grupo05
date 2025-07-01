@@ -49,7 +49,7 @@ BEGIN
 		RETURN;
 	END
 
-	-- Validamos el valor
+	-- Validamos la categoría
 	IF NOT EXISTS(SELECT 1 FROM socios.Categoria WHERE id_categoria = @id_categoria)
 	BEGIN
 		RAISERROR('La Categoria no existe.', 16, 1);
@@ -190,7 +190,10 @@ CREATE OR ALTER PROCEDURE socios.cargar_tarifa_rec_sp
 	@id_actividad_rec INT,
 	@vigente_desde DATE = NULL,
 	@vigente_hasta DATE = NULL,
-	@valor DECIMAL(10,2)
+	@valor DECIMAL(10,2),
+	@modalidad VARCHAR(10),
+	@edad_maxima INT,
+	@invitado BIT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -202,10 +205,31 @@ BEGIN
 		RETURN;
 	END
 
-	-- Validamos el valor
+	-- Validamos la actividad recreativa
 	IF NOT EXISTS(SELECT 1 FROM socios.ActividadRecreativa WHERE id_actividad_rec = @id_actividad_rec)
 	BEGIN
 		RAISERROR('La actividad Recreativa no existe.', 16, 1);
+		RETURN;
+	END
+
+	-- Validamos modalidad
+	IF @modalidad IS NULL
+	BEGIN
+		RAISERROR('La modalidad no puede ser nula.', 16, 1);
+		RETURN;
+	END
+
+	-- Validamos invitado
+	IF @invitado IS NULL
+	BEGIN
+		RAISERROR('El parámetro invitado no puede ser nulo.', 16, 1);
+		RETURN;
+	END
+
+	-- Validamos edad_maxima en caso de no ser null
+	IF @edad_maxima IS NOT NULL AND @edad_maxima <= 0
+	BEGIN
+		RAISERROR('La edad máxima debe ser positiva.', 16, 1);
 		RETURN;
 	END
 
@@ -228,6 +252,9 @@ BEGIN
         SELECT 1 
         FROM socios.TarifaActividadRecreativa
         WHERE id_actividad_rec = @id_actividad_rec
+			AND modalidad = @modalidad
+			AND edad_maxima = @edad_maxima
+			AND invitado = @invitado
 			AND (
 				-- Condición de solapamiento:
 				-- El inicio del nuevo rango (@vigente_desde) es menor o igual al fin del rango existente (o "sin limite").
@@ -246,13 +273,19 @@ BEGIN
         id_actividad_rec,
         vigente_desde,
         vigente_hasta,
-        valor
+        valor,
+		modalidad,
+		edad_maxima,
+		invitado
     )
     VALUES (
         @id_actividad_rec,
         @vigente_desde,
         @vigente_hasta,
-        @valor
+        @valor,
+		@modalidad,
+		@edad_maxima,
+		@invitado
     );
 END
 GO
