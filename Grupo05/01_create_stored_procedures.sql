@@ -1693,3 +1693,150 @@ BEGIN
 	END CATCH
 END
 GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.facturacion_membresia_socio_sp
+Descripción: Genera una factura de membresía completa para un socio.
+    El proceso realiza los siguientes pasos:
+    1.  Crea una cabecera de Factura y Membresia.
+    2.  Calcula y suma el costo de la cuota social según la categoría del socio.
+    3.  Busca todas las actividades deportivas activas del socio.
+    4.  Calcula y suma el costo de cada actividad, registrándolas en DetalleDeportiva.
+    5.  Aplica un descuento del 10% sobre las actividades si el socio realiza más de una.
+    6.  Aplica un descuento del 15% sobre el total si el socio pertenece a un grupo familiar.
+    7.  Actualiza los totales (bruto y neto) en las tablas Factura y Membresia.
+    8.  Asigna la factura a la persona responsable del pago.
+    Todo el proceso se ejecuta dentro de una transacción para asegurar la atomicidad.
+Parámetros:
+    @id_socio INT: El identificador único del socio a facturar.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.facturacion_membresia_socio_sp
+    @id_socio INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Validación inicial: Verificar que el socio existe y está activo.
+    IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio AND activo = 1)
+    BEGIN
+        RAISERROR('El socio con ID %d no existe o no se encuentra activo.', 16, 1, @id_socio);
+        RETURN;
+    END
+
+    -- Declaración de variables
+    DECLARE @fecha_actual DATE = GETDATE(),
+            @id_factura INT,
+            @id_membresia INT,
+            @monto_categoria DECIMAL(10,2) = 0,
+            @cantidad_act_dep INT = 0,
+            @monto_deportiva_bruto DECIMAL(10,2) = 0,
+            @monto_deportiva_neto DECIMAL(10,2) = 0,
+            @monto_bruto_total DECIMAL(10,2) = 0,
+            @monto_neto_total DECIMAL(10,2) = 0,
+            @id_persona_socio INT;
+
+    -- Obtener el id_persona del socio para futuras consultas
+    SELECT @id_persona_socio = id_persona FROM socios.Socio WHERE id_socio = @id_socio;
+
+    BEGIN TRANSACTION;
+    BEGIN TRY
+
+        -- Paso 1: Crear la cabecera de la factura y la membresía con valores iniciales.
+        INSERT INTO socios.Factura (fecha_emision, total_bruto, total_neto)
+        VALUES (@fecha_actual, 0, 0);
+        SET @id_factura = SCOPE_IDENTITY();
+
+        INSERT INTO socios.Membresia (id_socio, id_factura, total_bruto, total_neto)
+        VALUES (@id_socio, @id_factura, 0, 0);
+        SET @id_membresia = SCOPE_IDENTITY();
+
+        -- Paso 2: Calcular el costo de la cuota social según la categoría del socio.
+        SELECT @monto_categoria = tc.valor
+        FROM socios.Socio s
+        INNER JOIN socios.TarifaCategoria tc ON s.id_categoria = tc.id_categoria
+        WHERE s.id_socio = @id_socio
+          AND @fecha_actual BETWEEN tc.vigencia_desde AND tc.vigencia_hasta;
+        
+        -- Acumular el monto de la categoría a los totales.
+        SET @monto_bruto_total += ISNULL(@monto_categoria, 0);
+        SET @monto_neto_total += ISNULL(@monto_categoria, 0);
+
+        -- Paso 3: Insertar el detalle de las actividades deportivas activas.
+        INSERT INTO socios.DetalleDeportiva (id_inscripcion_dep, id_membresia, monto)
+        SELECT 
+            iad.id_inscripcion_dep,
+            @id_membresia,
+            tad.valor
+        FROM socios.InscripcionActividadDeportiva iad
+        INNER JOIN socios.TarifaActividadDeportiva tad ON iad.id_actividad_dep = tad.id_actividad_dep
+        WHERE iad.id_socio = @id_socio
+          AND iad.fecha_baja IS NULL -- Solo inscripciones activas
+          AND @fecha_actual BETWEEN tad.vigente_desde AND tad.vigente_hasta;
+
+        -- Paso 4: Calcular el costo total de las actividades deportivas y la cantidad.
+        SELECT 
+            @monto_deportiva_bruto = ISNULL(SUM(monto), 0),
+            @cantidad_act_dep = COUNT(id_detalle_deportiva)
+        FROM socios.DetalleDeportiva
+        WHERE id_membresia = @id_membresia;
+
+        SET @monto_bruto_total += @monto_deportiva_bruto;
+
+        -- Paso 5: Aplicar descuento del 10% si realiza más de una actividad deportiva.
+        IF @cantidad_act_dep > 1
+        BEGIN
+            SET @monto_deportiva_neto = @monto_deportiva_bruto * 0.90;
+        END
+        ELSE
+        BEGIN
+            SET @monto_deportiva_neto = @monto_deportiva_bruto;
+        END;
+        
+        SET @monto_neto_total += @monto_deportiva_neto;
+
+        -- Paso 6: Aplicar descuento del 15% si el socio pertenece a un grupo familiar.
+        IF EXISTS (
+            SELECT 1 FROM socios.Parentesco 
+            WHERE (id_persona = @id_persona_socio OR id_persona_responsable = @id_persona_socio)
+              AND @fecha_actual BETWEEN fecha_desde AND fecha_hasta
+        )
+        BEGIN
+            SET @monto_neto_total = @monto_neto_total * 0.85;
+        END;
+
+        -- Paso 7: Actualizar los totales finales en la factura y la membresía.
+        UPDATE socios.Factura 
+        SET total_bruto = @monto_bruto_total, total_neto = @monto_neto_total
+        WHERE id_factura = @id_factura;
+
+        UPDATE socios.Membresia
+        SET total_bruto = @monto_bruto_total, total_neto = @monto_neto_total
+        WHERE id_membresia = @id_membresia;
+        
+        -- Paso 8: Asignar la factura a la persona responsable del pago.
+        DECLARE @id_persona_responsable INT;
+        
+        -- El responsable es el tutor/padre si existe, si no, es el propio socio.
+        SELECT TOP 1 @id_persona_responsable = COALESCE(par.id_persona_responsable, s.id_persona)
+        FROM socios.Socio s
+        LEFT JOIN socios.Parentesco par ON s.id_persona = par.id_persona AND @fecha_actual BETWEEN par.fecha_desde AND par.fecha_hasta
+        WHERE s.id_socio = @id_socio;
+
+        INSERT INTO socios.FacturaResponsable (id_factura, id_persona)
+        VALUES (@id_factura, @id_persona_responsable);
+
+        COMMIT TRANSACTION;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        RAISERROR('Error al generar la factura de membresía: %s', 16, 1, @ErrorMessage);
+    END CATCH
+END
+GO
+
+EXEC socios.registrar_morosos_sp;
