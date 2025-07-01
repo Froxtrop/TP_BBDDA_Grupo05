@@ -1737,7 +1737,7 @@ BEGIN
         SELECT
             f.id_factura,
             link.id_socio,
-            f.total_neto * 
+            f.total_neto
         FROM socios.Factura f
         -- Nos unimos a nuestro CTE para encontrar el socio que generó la deuda
         INNER JOIN FacturaSocioLink link ON f.id_factura = link.id_factura
