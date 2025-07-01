@@ -1572,13 +1572,17 @@ BEGIN
         RAISERROR('El medio de pago proporcionada no existe.', 16, 1);
         RETURN;
     END
+
+	-- Obtenemos el monto de la factura
+	DECLARE @monto DECIMAL(10,2);
+	SELECT @monto = total_neto FROM socios.Factura WHERE id_factura = @id_factura;
 	
 	BEGIN TRANSACTION Tran1
 	BEGIN TRY
 		DECLARE @id_pago INT;
 		-- Insertamos en la tabla de Pago con los datos proporcionados
-		INSERT INTO socios.Pago (id_medio, fecha_pago, codigo_de_referencia)
-			VALUES (@id_medio, GETDATE(), @codigo_de_referencia);
+		INSERT INTO socios.Pago (id_medio, fecha_pago, codigo_de_referencia, monto)
+			VALUES (@id_medio, GETDATE(), @codigo_de_referencia, @monto);
 
 		SET @id_pago = SCOPE_IDENTITY();
 		-- Asociamos el pago a la factura
