@@ -111,7 +111,7 @@ BEGIN
 		id_categoria SMALLINT NOT NULL,
 		valor DECIMAL(10,2) NOT NULL,
 		vigencia_desde DATE NOT NULL,
-		vigencia_hasta DATE NOT NULL,
+		vigencia_hasta DATE NULL,
 		CONSTRAINT fk_TarifaCategoria_categoria FOREIGN KEY (id_categoria) REFERENCES socios.Categoria(id_categoria)
 	);
 END
@@ -183,7 +183,7 @@ BEGIN
 		id_tarifa_dep INT IDENTITY(1,1) PRIMARY KEY,
 		id_actividad_dep INT NOT NULL,
 		vigente_desde DATE NOT NULL,
-		vigente_hasta DATE NOT NULL,
+		vigente_hasta DATE,
 		valor DECIMAL(10,2) NOT NULL,
 		CONSTRAINT fk_TarifaActividadDeportiva_id_actividad_dep FOREIGN KEY (id_actividad_dep) REFERENCES socios.ActividadDeportiva(id_actividad_dep)
 	);
@@ -534,19 +534,19 @@ IF OBJECT_ID(N'[socios].[NotaDeCredito]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.NotaDeCredito (
 		id_nota_credito INT IDENTITY(1,1) PRIMARY KEY,
-		id_pago INT NOT NULL,
+		id_detalle_de_pago INT NOT NULL,
 		cuit VARCHAR(20) NOT NULL,
 		razon_social VARCHAR(100),
-		CONSTRAINT fk_NotaDeCredito_id_pago FOREIGN KEY (id_pago) REFERENCES socios.Pago(id_pago)
+		CONSTRAINT fk_NotaDeCredito_id_detalle_de_pago FOREIGN KEY (id_detalle_de_pago) REFERENCES socios.DetalleDePago(id_detalle_de_pago)
 	);
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[NotaDeCredito]';
 GO
 -- Índices NotaDeCredito
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_NotaDeCredito_id_pago' AND object_id = OBJECT_ID(N'[socios].[NotaDeCredito]', N'U'))
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_NotaDeCredito_id_detalle_de_pago' AND object_id = OBJECT_ID(N'[socios].[NotaDeCredito]', N'U'))
 BEGIN
-    CREATE NONCLUSTERED INDEX ix_NotaDeCredito_id_pago ON socios.NotaDeCredito(id_pago);
+    CREATE NONCLUSTERED INDEX ix_NotaDeCredito_id_detalle_de_pago ON socios.NotaDeCredito(id_detalle_de_pago);
 END;
 GO
 
@@ -555,11 +555,12 @@ BEGIN
 	CREATE TABLE socios.PagoACuenta (
 		id_pago_a_cuenta INT IDENTITY(1,1) PRIMARY KEY,
 		id_persona INT NOT NULL,
-		id_pago INT NOT NULL,
+		id_detalle_de_pago INT NOT NULL,
 		fecha DATE NOT NULL,
 		motivo VARCHAR(100) NOT NULL,
+		monto DECIMAL(10,2) NOT NULL,
 		CONSTRAINT fk_PagoACuenta_id_persona FOREIGN KEY (id_persona) REFERENCES socios.Persona(id_persona),
-		CONSTRAINT fk_PagoACuenta_id_pago FOREIGN KEY (id_pago) REFERENCES socios.Pago(id_pago)
+		CONSTRAINT fk_PagoACuenta_id_detalle_de_pago FOREIGN KEY (id_detalle_de_pago) REFERENCES socios.DetalleDePago(id_detalle_de_pago)
 	);
 END
 ELSE
@@ -571,9 +572,9 @@ BEGIN
     CREATE NONCLUSTERED INDEX ix_PagoACuenta_id_persona ON socios.PagoACuenta(id_persona);
 END;
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_PagoACuenta_id_pago' AND object_id = OBJECT_ID(N'[socios].[PagoACuenta]', N'U'))
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_PagoACuenta_id_detalle_de_pago' AND object_id = OBJECT_ID(N'[socios].[PagoACuenta]', N'U'))
 BEGIN
-    CREATE NONCLUSTERED INDEX ix_PagoACuenta_id_pago ON socios.PagoACuenta(id_pago);
+    CREATE NONCLUSTERED INDEX ix_PagoACuenta_id_detalle_de_pago ON socios.PagoACuenta(id_detalle_de_pago);
 END;
 GO
 

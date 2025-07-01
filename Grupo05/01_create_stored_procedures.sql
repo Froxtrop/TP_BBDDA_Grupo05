@@ -695,10 +695,73 @@ Descripción: Cargar tarifa deportiva
 Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.cargar_tarifa_dep_sp
+	@id_actividad_dep INT,
+	@vigente_desde DATE = NULL,
+	@vigente_hasta DATE = NULL,
+	@valor DECIMAL(10,2)
 AS
 BEGIN
     SET NOCOUNT ON;
-	RAISERROR('Sin implementar', 16, 1);
+
+	-- Validamos el valor
+	IF @valor IS NULL OR @valor < 0
+	BEGIN
+		RAISERROR('El valor de la tarifa debe ser positivo.', 16, 1);
+		RETURN;
+	END
+
+	-- Validamos el valor
+	IF NOT EXISTS(SELECT 1 FROM socios.ActividadDeportiva WHERE id_actividad_dep = @id_actividad_dep)
+	BEGIN
+		RAISERROR('La actividad deportiva no existe.', 16, 1);
+		RETURN;
+	END
+
+	IF @vigente_desde IS NULL
+        SET @vigente_desde = GETDATE();
+
+	-- Validación de fechas
+	IF @vigente_desde IS NOT NULL AND @vigente_hasta IS NOT NULL
+	BEGIN
+		IF @vigente_desde > @vigente_hasta
+		BEGIN
+		    RAISERROR('La fecha de inicio no puede ser mayor que la fecha de fin.', 16, 1);
+			RETURN;
+		END
+	END
+
+	DECLARE @fecha_null DATE = '9999-12-31';
+	-- Validar que no exista una tarifa para esas fechas
+    IF EXISTS (
+        SELECT 1 
+        FROM socios.TarifaActividadDeportiva
+        WHERE id_actividad_dep = @id_actividad_dep
+			AND (
+				-- Condición de solapamiento:
+				-- El inicio del nuevo rango (@vigente_desde) es menor o igual al fin del rango existente (o "sin limite").
+				@vigente_desde <= ISNULL(vigente_hasta, @fecha_null)
+				AND
+				-- El inicio del rango existente (vigente_desde) es menor o igual al fin del nuevo rango (o "sin limite").
+				vigente_desde <= ISNULL(@vigente_hasta, @fecha_null)
+			)
+    )
+    BEGIN
+        RAISERROR('Ya existe una tarifa vigente para las fechas dadas.', 16, 1);
+		RETURN;
+	END
+
+	INSERT INTO socios.TarifaActividadDeportiva (
+        id_actividad_dep,
+        vigente_desde,
+        vigente_hasta,
+        valor
+    )
+    VALUES (
+        @id_actividad_dep,
+        @vigente_desde,
+        @vigente_hasta,
+        @valor
+    );
 END
 GO
 
@@ -1116,6 +1179,20 @@ BEGIN
 					(tc.vigencia_hasta >= @primer_dia_mes OR tc.vigencia_hasta IS NULL);
 
 		SET @monto_bruto = @monto_bruto + @monto_categoria;
+
+		/* Buscamos si el socio pertenece a un grupo familiar, de ser asi
+		aplicamos un descuento del 15% en el total de la facturación de membresía*/
+		IF EXISTS (
+			SELECT 1 FROM socios.Parentesco par
+			INNER JOIN socios.Socio s ON par.id_persona = s.id_persona 
+				OR par.id_persona_responsable = s.id_persona
+			WHERE s.id_socio = @id_socio
+			AND (par.fecha_hasta >= @primer_dia_mes OR par.fecha_hasta IS NULL)
+		)
+		BEGIN;
+			SET @monto_categoria = @monto_categoria * 0.85;
+		END;
+
 		SET @monto_neto = @monto_neto + @monto_categoria;
 
 		/* Nos traemos las actividades deportivas a las cuales está/estuvo
@@ -1153,19 +1230,6 @@ BEGIN
 			SET @monto_deportiva = @monto_deportiva * 0.9;
 		END;
 		SET @monto_neto = @monto_neto + @monto_deportiva;
-
-		/* Buscamos si el socio pertenece a un grupo familiar, de ser asi
-		aplicamos un descuento del 15% en el total de la facturación de membresía*/
-		IF EXISTS (
-			SELECT 1 FROM socios.Parentesco par
-			INNER JOIN socios.Socio s ON par.id_persona = s.id_persona 
-				OR par.id_persona_responsable = s.id_persona
-			WHERE s.id_socio = @id_socio
-			AND (par.fecha_hasta >= @primer_dia_mes OR par.fecha_hasta IS NULL)
-		)
-		BEGIN;
-			SET @monto_neto = @monto_neto * 0.85;
-		END;
 
 		-- Finalmente actualizamos los registros
 		UPDATE socios.Membresia 
@@ -1527,6 +1591,101 @@ BEGIN
 		ROLLBACK TRANSACTION Tran1
 
 		DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+	END CATCH
+END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: genarar_nota_de_credito_sp
+Descripción: Se hace una nota de crédito a una factura.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.genarar_nota_de_credito_sp
+    @id_detalle_de_pago INT,
+	@cuit VARCHAR(20),
+	@razon_social VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+	-- Validamos si la factura existe
+	IF NOT EXISTS (SELECT 1 FROM socios.DetalleDePago WHERE id_detalle_de_pago = @id_detalle_de_pago)
+	BEGIN
+        RAISERROR('El detalle de pago proporcionado no existe.', 16, 1);
+        RETURN;
+    END
+	-- Validamos cuit
+	IF @cuit IS NULL
+	BEGIN
+        RAISERROR('El cuit no puede ser nulo.', 16, 1);
+        RETURN;
+    END
+
+	INSERT INTO socios.NotaDeCredito(id_detalle_de_pago, cuit, razon_social)
+		VALUES (@id_detalle_de_pago, @cuit, @razon_social);
+END
+GO
+
+/***********************************************************************
+Nombre del procedimiento: genarar_pago_a_cuenta_sp
+Descripción: Generación de un pago a cuenta.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+CREATE OR ALTER PROCEDURE socios.genarar_pago_a_cuenta_sp
+    @id_detalle_de_pago INT,
+	@motivo VARCHAR(100),
+	@monto DECIMAL(10,2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+	-- Validamos si el detalle de pago existe
+	IF NOT EXISTS (SELECT 1 FROM socios.DetalleDePago WHERE id_detalle_de_pago = @id_detalle_de_pago)
+	BEGIN
+        RAISERROR('El detalle de pago proporcionado no existe.', 16, 1);
+        RETURN;
+    END
+	-- Validamos motivo
+	IF @motivo IS NULL
+	BEGIN
+        RAISERROR('El motivo no puede ser nulo.', 16, 1);
+        RETURN;
+    END
+	-- Validamos monto
+	IF @monto IS NULL OR @monto <= 0
+	BEGIN
+        RAISERROR('El monto debe ser positivo.', 16, 1);
+        RETURN;
+    END
+
+	-- Buscamos el responsable del pago
+	DECLARE @id_persona INT;
+
+	SELECT @id_persona = fr.id_persona 
+	FROM socios.DetalleDePago ddp
+	INNER JOIN socios.Factura f ON ddp.id_factura = f.id_factura
+	INNER JOIN socios.FacturaResponsable fr ON fr.id_factura = f.id_factura
+		WHERE ddp.id_detalle_de_pago = @id_detalle_de_pago;
+
+	BEGIN TRANSACTION Tran1;
+    BEGIN TRY
+
+	-- Insertamos el registro de pago a cuenta
+	INSERT INTO socios.PagoACuenta(id_persona, id_detalle_de_pago, fecha, motivo, monto)
+		VALUES (@id_persona, @id_detalle_de_pago, GETDATE(), @motivo, @monto);
+
+	-- Le agregamos al saldo del socio el monto del pago a cuenta
+	UPDATE socios.Persona SET saldo = saldo + @monto
+		WHERE id_persona = @id_persona;
+
+	COMMIT TRANSACTION Tran1;
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION Tran1;
+
+        DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
         DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
         DECLARE @ErrorState INT = ERROR_STATE();
         
