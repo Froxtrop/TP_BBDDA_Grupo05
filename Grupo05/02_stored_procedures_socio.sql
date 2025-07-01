@@ -340,13 +340,13 @@ CREATE OR ALTER PROCEDURE socios.registrar_inscripcion_menor_sp
     @id_persona_resp INT OUTPUT,
 
     -- Parentesco
-    @parentesco CHAR(1)  -- 'P', 'M' o 'T'
+    @parentesco VARCHAR(10)  -- 'P', 'M' o 'T'
 AS
 BEGIN
     SET NOCOUNT ON;
 
     -- Validar parentesco
-    IF @parentesco NOT IN ('P','M','T')
+    IF @parentesco NOT IN ('P','M','T') OR LEN(@parentesco) > 1
     BEGIN
         RAISERROR('[Error] socios.registrar_inscripcion_menor_sp: Parentesco inválido.', 16, 1);
         RETURN;
