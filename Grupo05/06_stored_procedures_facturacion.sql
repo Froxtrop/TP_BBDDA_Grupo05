@@ -41,7 +41,8 @@ BEGIN
     SET NOCOUNT ON;
 	
 	-- Validamos si el socio existe
-	IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio)
+	IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio
+		AND activo = 1)
 	BEGIN
         RAISERROR('El socio proporcionado no existe.', 16, 1);
         RETURN;
@@ -207,6 +208,187 @@ BEGIN
 END
 GO
 
+
+/***********************************************************************
+Nombre del procedimiento: socios.inscripcion_y_facturacion_completa_socio_sp
+Descripción: Registra una persona y la convierte en socio, le genera una factura de la membresía
+	y de la actividad deportiva a la que esté inscripto si es que lo está.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+
+CREATE OR ALTER PROCEDURE socios.inscripcion_y_facturacion_completa_socio_sp
+    @nombre VARCHAR(50),
+    @apellido VARCHAR(50),
+    @dni INT,
+    @email VARCHAR(255) = NULL,
+    @fecha_de_nacimiento DATE,
+    @telefono VARCHAR(50) = NULL,
+    @obra_social VARCHAR(100) = NULL,
+    @nro_obra_social INT = NULL,
+    @telefono_emergencia VARCHAR(50) = NULL,
+	@id_act_dep INT,
+	@fecha_alta_act_dep DATE = NULL,
+    @id_persona INT OUTPUT,
+    @id_socio INT OUTPUT,
+	@id_factura INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+	BEGIN TRANSACTION tran1
+	BEGIN TRY
+		
+		EXEC socios.inscripcion_socio_sp
+			@nombre = @nombre,
+			@apellido = @apellido,
+			@dni = @dni,
+			@email = @email,
+			@fecha_de_nacimiento = @fecha_de_nacimiento,
+			@telefono = @telefono,
+			@obra_social = @obra_social,
+			@nro_obra_social = @nro_obra_social,
+			@telefono_emergencia = @telefono_emergencia,
+			@id_persona = @id_persona OUTPUT,
+			@id_socio = @id_socio OUTPUT;
+
+		IF @id_socio IS NULL RETURN;
+
+		IF @id_act_dep IS NOT NULL
+		BEGIN
+			-- Inscripcion actividad deportiva
+			EXEC socios.inscribir_socio_a_actividad_dep_sp
+				@id_socio = @id_socio,
+				@id_actividad_deportiva = @id_act_dep,
+				@fecha_alta = @fecha_alta_act_dep,
+				@fecha_baja = NULL;
+		END
+
+		-- Facturacion de la inscripcion
+		EXEC socios.facturacion_membresia_socio_sp
+			@id_socio = @id_socio,
+			@id_factura = @id_factura OUTPUT;
+
+	COMMIT TRAN tran1
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION tran1
+
+		DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+	END CATCH
+
+END;
+GO
+
+/***********************************************************************
+Nombre del procedimiento: socios.inscripcion_y_facturacion_completa_socio_menor_sp
+Descripción: Registra una persona menor de edad y la convierte en socio, le genera una factura de la membresía
+	y de la actividad deportiva a la que esté inscripto si es que lo está.
+Autor: Grupo 05 - Com2900
+***********************************************************************/
+
+CREATE OR ALTER PROCEDURE socios.inscripcion_y_facturacion_completa_socio_menor_sp
+    -- Datos del menor
+    @nombre_menor VARCHAR(50),
+    @apellido_menor VARCHAR(50),
+    @dni_menor INT,
+    @email_menor VARCHAR(255) = NULL,
+    @fecha_nac_menor DATE,
+    @telefono_menor VARCHAR(50) = NULL,
+    @obra_social VARCHAR(100) = NULL,
+    @nro_obra_social INT = NULL,
+    @telefono_emergencia VARCHAR(50) = NULL,
+	@id_act_dep INT = NULL,
+	@fecha_alta_act_dep DATE = NULL,
+
+    -- Datos del responsable
+    @nombre_resp VARCHAR(50) = NULL,
+    @apellido_resp VARCHAR(50) = NULL,
+    @dni_resp INT = NULL,
+    @email_resp VARCHAR(255) = NULL,
+    @fecha_nac_resp DATE = NULL,
+    @telefono_resp VARCHAR(50) = NULL,
+	@id_medio_de_pago_resp INT = NULL,
+
+    -- Output
+    @id_persona_menor INT OUTPUT,
+    @id_socio_menor INT OUTPUT,
+    @id_persona_resp INT OUTPUT,
+	@id_factura INT OUTPUT,
+
+    -- Parentesco
+    @parentesco VARCHAR(10)  -- 'P', 'M' o 'T'
+
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+	BEGIN TRANSACTION tran1
+	BEGIN TRY
+		
+		EXEC socios.registrar_inscripcion_menor_sp
+		    -- Datos del menor
+			@nombre_menor = @nombre_menor,
+			@apellido_menor = @apellido_menor,
+			@dni_menor = @dni_menor,
+			@email_menor = @email_menor,
+			@fecha_nac_menor = @fecha_nac_menor,
+			@telefono_menor = @telefono_menor,
+			@obra_social = @obra_social,
+			@nro_obra_social = @nro_obra_social,
+			@telefono_emergencia = @telefono_emergencia,
+
+			-- Datos del responsable
+			@nombre_resp = @nombre_resp,
+			@apellido_resp = @apellido_resp,
+			@dni_resp = @dni_resp,
+			@email_resp = @email_resp,
+			@fecha_nac_resp = @fecha_nac_resp,
+			@telefono_resp = @telefono_resp,
+			@id_medio_de_pago_resp = @id_medio_de_pago_resp,
+
+			-- Output
+			@id_persona_menor = @id_persona_menor OUTPUT,
+			@id_socio_menor = @id_socio_menor OUTPUT,
+			@id_persona_resp = @id_persona_resp OUTPUT,
+
+			-- Parentesco
+			@parentesco = @parentesco  -- 'P', 'M' o 'T'
+			
+		IF @id_act_dep IS NOT NULL
+		BEGIN
+			-- Inscripcion actividad deportiva
+			EXEC socios.inscribir_socio_a_actividad_dep_sp
+				@id_socio = @id_socio_menor,
+				@id_actividad_deportiva = @id_act_dep,
+				@fecha_alta = @fecha_alta_act_dep,
+				@fecha_baja = NULL;
+		END
+
+		-- Facturacion de la inscripcion
+		EXEC socios.facturacion_membresia_socio_sp
+			@id_socio = @id_socio_menor,
+			@id_factura = @id_factura OUTPUT;
+
+	COMMIT TRAN tran1
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION tran1
+
+		DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+        DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+        DECLARE @ErrorState INT = ERROR_STATE();
+        
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+	END CATCH
+
+END;
+GO
+
+
 /***********************************************************************
 Nombre del procedimiento: actualizar_datos_factura_sp
 Descripción: Se actualiza la factura con el número de factura que
@@ -249,7 +431,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 	-- Validamos si el socio existe
-	IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio)
+	IF NOT EXISTS (SELECT 1 FROM socios.Socio WHERE id_socio = @id_socio
+		AND activo = 1)
 	BEGIN
         RAISERROR('El socio proporcionado no existe.', 16, 1);
         RETURN;
@@ -384,6 +567,18 @@ BEGIN
         RAISERROR('No hay invitación por parte de un socio.', 16, 1);
         RETURN;
     END
+
+	-- Si la invitacion existe, validamos si el socio que invitó está activo
+	IF NOT EXISTS (
+		SELECT 1 FROM socios.Socio S
+			JOIN socios.InscripcionActividadRecreativa I
+				ON S.id_socio = I.id_socio
+		WHERE S.activo = 1
+	)
+	BEGIN
+	    RAISERROR('El socio que invita no está activo.', 16, 1);
+        RETURN;
+	END
 
 	DECLARE @fecha_actual DATE = GETDATE(),
 			@monto_recreativa DECIMAL(10,2) = 0;

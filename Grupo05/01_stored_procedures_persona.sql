@@ -84,6 +84,7 @@ CREATE OR ALTER PROCEDURE socios.registrar_persona_sp
     @fecha_de_nacimiento DATE,
     @telefono VARCHAR(50) = NULL,
     @saldo DECIMAL(10,2) = 0,
+	@id_medio_de_pago INT = NULL,
     @id_persona INT OUTPUT
 AS
 BEGIN
@@ -117,11 +118,20 @@ BEGIN
         RETURN;
     END
 
-    -- Inserción
+	IF @id_medio_de_pago IS NOT NULL AND NOT EXISTS (
+		SELECT 1 FROM socios.MedioDePago
+			WHERE id_medio_de_pago = @id_medio_de_pago
+	)
+	BEGIN
+        RAISERROR('[Error] socios.registrar_persona_sp: El medio de pago es inválido.', 16, 1);
+        RETURN;
+    END
+	
+	-- Inserción
     INSERT INTO socios.Persona (
-        nombre, apellido, dni, email, fecha_de_nacimiento, telefono, saldo
+        nombre, apellido, dni, email, fecha_de_nacimiento, telefono, saldo, id_medio_de_pago
     ) VALUES (
-        @nombre, @apellido, @dni, @email, @fecha_de_nacimiento, @telefono, @saldo
+        @nombre, @apellido, @dni, @email, @fecha_de_nacimiento, @telefono, @saldo, @id_medio_de_pago
     );
 
     -- Retorna el id de la persona que acaba de insertar
@@ -142,7 +152,8 @@ CREATE OR ALTER PROCEDURE socios.actualizar_persona_sp
     @email VARCHAR(255) = NULL,
     @fecha_de_nacimiento DATE,
     @telefono VARCHAR(50) = NULL,
-    @saldo DECIMAL(10,2) = 0
+    @saldo DECIMAL(10,2) = 0,
+	@id_medio_de_pago INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -182,6 +193,16 @@ BEGIN
         RETURN;
     END
 
+	IF @id_medio_de_pago IS NOT NULL AND NOT EXISTS (
+		SELECT 1 FROM socios.MedioDePago
+			WHERE id_medio_de_pago = @id_medio_de_pago
+	)
+	BEGIN
+        RAISERROR('[Error] socios.registrar_persona_sp: El medio de pago es inválido.', 16, 1);
+        RETURN;
+    END
+	
+
     -- Actualización
     UPDATE socios.Persona
     SET
@@ -191,7 +212,8 @@ BEGIN
         email = @email,
         fecha_de_nacimiento = @fecha_de_nacimiento,
         telefono = @telefono,
-        saldo = @saldo
+        saldo = @saldo,
+		id_medio_de_pago = @id_medio_de_pago
     WHERE id_persona = @id_persona;
 END
 GO
@@ -206,50 +228,8 @@ CREATE OR ALTER PROCEDURE socios.eliminar_persona_sp
 AS
 BEGIN
     SET NOCOUNT ON;
-
     -- Intento de eliminación bloqueado
     RAISERROR('[Error] socios.eliminar_persona_sp: No se puede eliminar una persona del sistema.', 16, 1);
     RETURN;
-END
-GO
-/***********************************************************************
-Nombre del procedimiento: socios.registrar_persona_sp
-Descripción: Registra una persona en la tabla [Persona] validando datos.
-Devuelve el id_persona insertado por parámetro OUTPUT.
-Autor: Grupo 05 - Com2900
-***********************************************************************/
-CREATE OR ALTER PROCEDURE socios.registrar_invitacion_sp
-    @nombre_invitado VARCHAR(50) = NULL,
-    @apellido_invitado VARCHAR(50) = NULL,
-    @dni_invitado INT,
-    @email_invitado VARCHAR(255) = NULL,
-    @fecha_de_nacimiento_invitado DATE = NULL,
-    @telefono_invitado VARCHAR(50) = NULL,
-    @id_socio_invitador INT,
-	@id_actividad_recreativa_invitada INT,
-	@id_persona_invitada INT,
-	@id_factura_invitacion INT OUTPUT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    -- Validación: DNI único
-    IF NOT EXISTS (SELECT 1 FROM socios.Persona WHERE dni = @dni_invitado)
-    BEGIN
-        EXEC socios.registrar_persona_sp
-		 @nombre = @nombre_invitado,
-		 @apellido = @apellido_invitado,
-		 @dni = @dni_invitado,
-		 @email = @email_invitado,
-		 @fecha_de_nacimiento = @fecha_de_nacimiento_invitado,
-		 @telefono = @telefono_invitado,
-		 @saldo = 0,
-		 @id_persona = @id_persona_invitada
-    END
-	
-	EXEC socios.generar_factura_recreativa_invitado_sp 
-		@id_persona = @id_persona_invitada,
-		@id_inscripcion_rec = @id_actividad_recreativa_invitada,
-		@id_factura = @id_factura_invitacion OUTPUT
 END
 GO

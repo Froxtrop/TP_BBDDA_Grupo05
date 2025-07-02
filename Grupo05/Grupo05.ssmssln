@@ -22,6 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		testing_facturacion.sql = testing_facturacion.sql
 		testing_reportes.sql = testing_reportes.sql
 		testing_socios.sql = testing_socios.sql
+		testing_socios_inscripcion_facturacion_automatica.sql = testing_socios_inscripcion_facturacion_automatica.sql
 	EndProjectSection
 EndProject
 Global
@@ -29,7 +30,7 @@ Global
 		Default|Default = Default|Default
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EDFD8341-E4FE-4458-8759-F18F804E63DA}.Default|Default.ActiveCfg = Default
+		{F1F16891-2F4C-422A-A05A-C7E69DC7B899}.Default|Default.ActiveCfg = Default
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

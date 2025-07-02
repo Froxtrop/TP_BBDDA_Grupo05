@@ -35,7 +35,6 @@ Autor: Grupo 05 - Com2900
 ***********************************************************************/
 CREATE OR ALTER PROCEDURE socios.pagar_factura_sp
     @id_factura INT,
-	@id_medio INT,
 	@codigo_de_referencia VARCHAR(50)
 AS
 BEGIN
@@ -44,12 +43,6 @@ BEGIN
 	IF NOT EXISTS (SELECT 1 FROM socios.Factura WHERE id_factura = @id_factura)
 	BEGIN
         RAISERROR('La factura proporcionada no existe.', 16, 1);
-        RETURN;
-    END
-	-- Validamos el medio de pago utilizado
-	IF NOT EXISTS (SELECT 1 FROM socios.MedioDePago WHERE id_medio = @id_medio)
-	BEGIN
-        RAISERROR('El medio de pago proporcionada no existe.', 16, 1);
         RETURN;
     END
 
@@ -61,8 +54,8 @@ BEGIN
 	BEGIN TRY
 		DECLARE @id_pago INT;
 		-- Insertamos en la tabla de Pago con los datos proporcionados
-		INSERT INTO socios.Pago (id_medio, fecha_pago, codigo_de_referencia, monto)
-			VALUES (@id_medio, GETDATE(), @codigo_de_referencia, @monto);
+		INSERT INTO socios.Pago (fecha_pago, codigo_de_referencia, monto)
+			VALUES (GETDATE(), @codigo_de_referencia, @monto);
 
 		SET @id_pago = SCOPE_IDENTITY();
 		-- Asociamos el pago a la factura

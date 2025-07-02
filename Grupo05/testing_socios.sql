@@ -14,6 +14,16 @@
  *
  ***********************************************************************/
 
+ /*
+	ESTOS ERAN LOS TEST VIEJOS ANTES DE LA CORRECCIÓN DE QUE UN SOCIO AL MOMENTO DE INSCRIBIRSE COMO
+	SOCIO, SE LE GENERE UNA FACTURA AUTOMÁTICA EN BASE A LA TARIFA DE LA CATEGORÍA CORRESPONDIENTE
+	SEGÚN SU EDAD Y LA ACTIVIDAD A LA QUE ESTÉ INSCRIBIENDOSE.
+	
+	Las pruebas en base a esa corrección, están en testing_socios_inscripcion_facturacion_automatica
+	Las pruebas en este script siguen funcionando, aunque puede que haya que renombrar o cambiar algunos parámetro
+ */
+
+
 RAISERROR('Este script no está pensado para ejecutarse "de una" con F5. Seleccioná y ejecutá de a poco.', 16, 1);
 GO
 
@@ -38,8 +48,6 @@ VALUES (1, '2025-07-01', '2025-12-31', 10000),
 -- Hasta acá
 SELECT * FROM socios.TarifaCategoria
 
-
-
 DELETE FROM socios.Socio;
 DELETE FROM socios.Parentesco;
 DELETE FROM socios.Persona;
@@ -51,6 +59,7 @@ GO
 DECLARE @id_persona_menor_solo INT,
 		@id_socio_menor_solo INT,
 		@id_persona_resp_menor_solo INT;
+
 EXEC socios.registrar_inscripcion_menor_sp
     @nombre_menor = 'Lucio',
     @apellido_menor = 'Franco',
@@ -394,7 +403,7 @@ DECLARE @id_persona_mayor_resp_de_3 INT, -- id de la persona mayor resp de 3 soc
 EXEC socios.registrar_persona_sp -- MAYOR
     @nombre = 'Valeria',
     @apellido = 'Pilar',
-    @dni = 12345678,
+    @dni = 7898987,
     @email = 'valeriapilar@example.com',
     @fecha_de_nacimiento = '1985-04-20',
     @telefono = '011-1234-5678',
@@ -493,4 +502,132 @@ FROM socios.Factura F
 	JOIN socios.Membresia M
 		ON M.id_factura = F.id_factura
 WHERE F.id_factura in (@id_factura_socio_menor_de_resp_1, @id_factura_socio_menor_de_resp_2, @id_factura_socio_menor_de_resp_3);
+-- Hasta acá
+
+-- Desde acá
+-- Tres socios menores, uno en una actividad y otro en más de una, y un responsable que no es socio
+DECLARE @id_persona_mayor_resp_de_3 INT, -- id de la persona mayor resp de 3 socios menor
+		@id_persona_menor_de_resp_1 INT,  -- id de la persona1 menor a cargo de un resp
+		@id_socio_menor_de_resp_1 INT; -- id de socio3 menor a cargo de un resp
+
+EXEC socios.registrar_persona_sp -- MAYOR
+    @nombre = 'Valeria',
+    @apellido = 'Pilar',
+    @dni = 12321231,
+    @email = 'valeriapilar@example.com',
+    @fecha_de_nacimiento = '1985-04-20',
+    @telefono = '011-1234-5678',
+    @saldo = 0,
+    @id_persona = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_persona_sp]: ID de persona insertada = ' + CAST(@id_persona_mayor_resp_de_3 AS VARCHAR);
+
+EXEC socios.registrar_inscripcion_menor_sp -- MENOR 1
+    @nombre_menor = 'Valentina',
+    @apellido_menor = 'Benitez',
+    @dni_menor = 32154261,
+    @email_menor = 'valentinapilar@example.com',
+    @fecha_nac_menor = '2011-08-15',
+    @telefono_menor = '011-2222-4444',
+    @obra_social = 'Swiss Medical',
+    @nro_obra_social = 112233,
+    @telefono_emergencia = '011-7777-1234',
+    @parentesco = 'M',
+    @id_persona_menor = @id_persona_menor_de_resp_1 OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_1 OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_de_3 OUTPUT;
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Menor registrado con ID = ' + CAST(@id_persona_menor_de_resp_1 AS VARCHAR);
+PRINT '[Éxito] [registrar_inscripcion_menor_sp]: Socio menor generado con ID = ' + CAST(@id_socio_menor_de_resp_1 AS VARCHAR);
+
+-- EL HIJO 3 ESTÁ EN DOS ACTIVIDADES, DEBE TENER DESCUENTO DE CANTIDAD DE ACT DEP
+EXEC socios.inscribir_socio_a_actividad_dep_sp  
+	@id_socio = @id_socio_menor_de_resp_1,
+	@id_actividad_deportiva = 2;
+
+EXEC socios.inscribir_socio_a_actividad_dep_sp  
+	@id_socio = @id_socio_menor_de_resp_1,
+	@id_actividad_deportiva = 3;
+
+
+DECLARE @id_factura_socio_menor_de_resp_1 INT;
+
+EXEC socios.facturacion_membresia_socio_sp
+	@id_socio = @id_socio_menor_de_resp_1,
+	@id_factura = @id_factura_socio_menor_de_resp_1 OUTPUT;
+
+-- Demostración
+SELECT F.*, M.id_socio as CorrespondeA, P.id_persona as ID_Resp, (P.nombre+' '+P.apellido) as Responsable
+FROM socios.Factura F
+	JOIN socios.FacturaResponsable R
+		ON F.id_factura = R.id_factura
+	JOIN socios.Persona P
+		ON P.id_persona = R.id_persona
+	JOIN socios.Membresia M
+		ON M.id_factura = F.id_factura
+WHERE F.id_factura = @id_factura_socio_menor_de_resp_1;
+-- Hasta acá
+
+
+-- Socio mayor a cargo de un socio menor
+DECLARE @id_persona_mayor_resp_solo INT, -- id de la persona mayor resp de UN solo socio menor
+		@id_socio_mayor_resp_solo INT, -- id de socio mayor resp de UN solo socio menor
+		@id_persona_menor_de_resp_solo INT,  -- id de la persona menor a cargo de un resp
+		@id_socio_menor_de_resp_solo INT; -- id de socio menor a cargo de un resp
+
+EXEC socios.inscripcion_socio_sp -- PERSONA MAYOR
+    @nombre = 'Jair',
+    @apellido = 'HASDFJ',
+    @dni = 9999999,
+    @email = 'soyprofe@example.com',
+    @fecha_de_nacimiento = '1990-05-15',
+    @telefono = '011-2233-4455',
+    @obra_social = 'OSDE',
+    @nro_obra_social = 556677,
+    @telefono_emergencia = '011-8877-6655',
+    @id_persona = @id_persona_mayor_resp_solo OUTPUT,
+    @id_socio = @id_socio_mayor_resp_solo OUTPUT;
+PRINT '[Éxito] [inscripcion_socio_sp]: Persona registrada con ID = ' + CAST(@id_persona_mayor_resp_solo AS VARCHAR);
+PRINT '[Éxito] [inscripcion_socio_sp]: Socio generado con ID = ' + CAST(@id_socio_mayor_resp_solo AS VARCHAR);
+
+SELECT @id_socio_mayor_resp_solo
+SELECT * FROM socios.Socio WHERE id_socio =5012
+
+DECLARE @id_persona_menor_de_resp_solo INT,  -- id de la persona menor a cargo de un resp
+		@id_socio_menor_de_resp_solo INT,
+		@id_persona_mayor_resp_solo INT = 158; 
+EXEC socios.registrar_inscripcion_menor_sp
+    @nombre_menor = 'Gonzalo',
+    @apellido_menor = 'Casella',
+    @dni_menor = 33333333,
+    @email_menor = 'gonza@example.com',
+    @fecha_nac_menor = '2010-04-01',
+    @telefono_menor = '011-9999-8888',
+    @obra_social = 'Galeno',
+    @nro_obra_social = 456789,
+    @telefono_emergencia = '011-3344-5566',
+    @parentesco = 'P',
+    @id_persona_menor = @id_persona_menor_de_resp_solo OUTPUT,
+    @id_socio_menor = @id_socio_menor_de_resp_solo OUTPUT,
+    @id_persona_resp = @id_persona_mayor_resp_solo OUTPUT;
+
+SELECT @id_persona_menor_de_resp_solo, @id_socio_menor_de_resp_solo
+
+DECLARE @id_factura_socio_mayor_resp_solo INT, -- Factura de Socio Mayor
+		@id_factura_socio_menor_de_resp_solo INT; -- Factura de Socio Menor
+
+EXEC socios.facturacion_membresia_socio_sp -- Facturacion del Socio Menor
+	@id_socio = @id_socio_menor_de_resp_solo,
+	@id_factura = @id_factura_socio_menor_de_resp_solo OUTPUT;
+
+EXEC socios.facturacion_membresia_socio_sp -- Facturacion del Socio Mayor
+	@id_socio = @id_socio_mayor_resp_solo,
+	@id_factura = @id_factura_socio_mayor_resp_solo OUTPUT;
+
+-- Demostración
+SELECT F.*, P.id_persona as ID_Resp, (P.nombre+' '+P.apellido) as Responsable FROM socios.Factura F
+	JOIN socios.FacturaResponsable R
+		ON F.id_factura = R.id_factura
+	JOIN socios.Persona P
+		ON P.id_persona = R.id_persona
+WHERE F.id_factura = @id_factura_socio_menor_de_resp_solo
+	OR F.id_factura = @id_factura_socio_mayor_resp_solo
 -- Hasta acá

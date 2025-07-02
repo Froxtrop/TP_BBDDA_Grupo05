@@ -84,8 +84,7 @@ EXEC socios.generar_factura_recreativa_sp @id_socio
 
 /* Pago factura */
 EXEC socios.pagar_factura_sp
-3, -- id_factura
-1, -- id_medio_de_pago
+12, -- id_factura
 10238231 -- codigo de referencia
 
 SELECT * FROM socios.Pago

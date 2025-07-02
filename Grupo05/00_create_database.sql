@@ -43,6 +43,18 @@ ELSE
 	PRINT 'Ya existe el esquema "socios"';
 GO
 
+IF OBJECT_ID(N'[socios].[MedioDePago]', N'U') IS NULL
+BEGIN
+	CREATE TABLE socios.MedioDePago (
+		id_medio_de_pago INT IDENTITY(1,1) PRIMARY KEY,
+		nombre VARCHAR(100) NOT NULL
+	);
+END
+ELSE
+	PRINT 'Ya existe la tabla [socios].[MedioDePago]';
+GO
+
+
 /* Creacion de las tablas */
 IF OBJECT_ID(N'[socios].[Persona]', N'U') IS NULL
 BEGIN
@@ -54,11 +66,20 @@ BEGIN
 		email VARCHAR(255),
 		fecha_de_nacimiento DATE NOT NULL,
 		telefono VARCHAR(50),
-		saldo DECIMAL(10,2) NOT NULL DEFAULT 0
+		saldo DECIMAL(10,2) NOT NULL DEFAULT 0,
+		id_medio_de_pago INT,
+		CONSTRAINT fk_Pago_id_medio FOREIGN KEY (id_medio_de_pago) REFERENCES socios.MedioDePago(id_medio_de_pago)
 	);
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[Persona]';
+GO
+
+-- Índices Pago
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Persona_id_medio_de_pago' AND object_id = OBJECT_ID(N'[socios].[Persona]', N'U'))
+BEGIN
+    CREATE NONCLUSTERED INDEX ix_Persona_id_medio_de_pago ON socios.Persona(id_medio_de_pago);
+END;
 GO
 
 IF OBJECT_ID(N'[socios].[Parentesco]', N'U') IS NULL
@@ -473,36 +494,17 @@ BEGIN
 END;
 GO
 
-IF OBJECT_ID(N'[socios].[MedioDePago]', N'U') IS NULL
-BEGIN
-	CREATE TABLE socios.MedioDePago (
-		id_medio INT IDENTITY(1,1) PRIMARY KEY,
-		nombre VARCHAR(100) NOT NULL
-	);
-END
-ELSE
-	PRINT 'Ya existe la tabla [socios].[MedioDePago]';
-GO
-
 IF OBJECT_ID(N'[socios].[Pago]', N'U') IS NULL
 BEGIN
 	CREATE TABLE socios.Pago (
 		id_pago INT IDENTITY(1,1) PRIMARY KEY,
-		id_medio INT NOT NULL,
 		monto DECIMAL(10,2) NOT NULL,
 		fecha_pago DATE NOT NULL,
-		codigo_de_referencia varchar(50),
-		CONSTRAINT fk_Pago_id_medio FOREIGN KEY (id_medio) REFERENCES socios.MedioDePago(id_medio)
+		codigo_de_referencia varchar(50)
 	);
 END
 ELSE
 	PRINT 'Ya existe la tabla [socios].[Pago]';
-GO
--- Índices Pago
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_Pago_id_medio' AND object_id = OBJECT_ID(N'[socios].[Pago]', N'U'))
-BEGIN
-    CREATE NONCLUSTERED INDEX ix_Pago_id_medio ON socios.Pago(id_medio);
-END;
 GO
 
 IF OBJECT_ID(N'[socios].[DetalleDePago]', N'U') IS NULL

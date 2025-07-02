@@ -123,7 +123,7 @@ BEGIN
                 EXEC socios.registrar_persona_sp
                     @nombre = @nombre_csv, @apellido = @apellido_csv, @dni = @dni_csv, @email = @email_csv,
                     @fecha_de_nacimiento = @fecha_nac_csv, @telefono = @telefono_csv, @saldo = 0,
-                    @id_persona = @id_persona_out OUTPUT;
+					@id_medio_de_pago = NULL, @id_persona = @id_persona_out OUTPUT;
 
                 -- >>>>>>>> CAMBIO 3: Insertar el Socio directamente con el ID manual <<<<<<<<<<
                 -- No podemos usar 'registrar_socio_sp' porque necesitamos especificar el 'id_socio'.
@@ -322,6 +322,7 @@ BEGIN
                     @nombre = @nombre, @apellido = @apellido, @dni = @dni,
                     @email = @email, @fecha_de_nacimiento = @fecha_nac,
                     @telefono = @telefono, @saldo = 0,
+					@id_medio_de_pago = NULL,
                     @id_persona = @id_persona_menor OUTPUT;
 
                 -- Alta socio menor (ID explícito)

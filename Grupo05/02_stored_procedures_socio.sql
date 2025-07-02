@@ -178,6 +178,7 @@ CREATE OR ALTER PROCEDURE socios.inscripcion_socio_sp
     @obra_social VARCHAR(100) = NULL,
     @nro_obra_social INT = NULL,
     @telefono_emergencia VARCHAR(50) = NULL,
+	@id_medio_de_pago INT = NULL,
     @id_persona INT OUTPUT,
     @id_socio INT OUTPUT
 AS
@@ -193,6 +194,7 @@ BEGIN
         @fecha_de_nacimiento = @fecha_de_nacimiento,
         @telefono = @telefono,
         @saldo = 0,
+		@id_medio_de_pago = @id_medio_de_pago,
         @id_persona = @id_persona OUTPUT;
 
     IF @id_persona IS NULL RETURN;
@@ -209,6 +211,7 @@ BEGIN
         @telefono_emergencia = @telefono_emergencia,
         @id_categoria = @id_categoria,
         @id_socio = @id_socio OUTPUT;
+
 END;
 GO
 
@@ -228,7 +231,8 @@ CREATE OR ALTER PROCEDURE socios.actualizar_inscripcion_socio_sp
     @telefono VARCHAR(50) = NULL,
     @obra_social VARCHAR(100) = NULL,
     @nro_obra_social INT = NULL,
-    @telefono_emergencia VARCHAR(50) = NULL
+    @telefono_emergencia VARCHAR(50) = NULL,
+	@id_medio_de_pago INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -242,7 +246,8 @@ BEGIN
         @email = @email,
         @fecha_de_nacimiento = @fecha_de_nacimiento,
         @telefono = @telefono,
-        @saldo = 0;
+        @saldo = 0,
+		@id_medio_de_pago = @id_medio_de_pago;
 
     -- Obtener socio activo
     DECLARE @id_socio INT;
@@ -333,6 +338,7 @@ CREATE OR ALTER PROCEDURE socios.registrar_inscripcion_menor_sp
     @email_resp VARCHAR(255) = NULL,
     @fecha_nac_resp DATE = NULL,
     @telefono_resp VARCHAR(50) = NULL,
+	@id_medio_de_pago_resp INT = NULL,
 
     -- Output
     @id_persona_menor INT OUTPUT,
@@ -370,14 +376,14 @@ BEGIN
 	BEGIN 
 		-- Registrar responsable
 		EXEC socios.registrar_persona_sp
-			@nombre_resp, @apellido_resp, @dni_resp, @email_resp, @fecha_nac_resp, @telefono_resp, 0, @id_persona_resp OUTPUT;
+			@nombre_resp, @apellido_resp, @dni_resp, @email_resp, @fecha_nac_resp, @telefono_resp, 0, @id_medio_de_pago_resp, @id_persona_resp OUTPUT;
 
 		IF @id_persona_resp IS NULL RETURN;
 	END
 
     -- Registrar menor
     EXEC socios.registrar_persona_sp
-        @nombre_menor, @apellido_menor, @dni_menor, @email_menor, @fecha_nac_menor, @telefono_menor, 0, @id_persona_menor OUTPUT;
+        @nombre_menor, @apellido_menor, @dni_menor, @email_menor, @fecha_nac_menor, @telefono_menor, 0, NULL, @id_persona_menor OUTPUT;
 
     IF @id_persona_menor IS NULL RETURN;
 
@@ -413,14 +419,15 @@ CREATE OR ALTER PROCEDURE socios.actualizar_inscripcion_menor_sp
     @dni_resp INT,
     @email_resp VARCHAR(255) = NULL,
     @fecha_nac_resp DATE,
-    @telefono_resp VARCHAR(50) = NULL
+    @telefono_resp VARCHAR(50) = NULL,
+	@id_medio_de_pago_resp INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
 
     -- Actualizar persona menor
     EXEC socios.actualizar_persona_sp
-        @id_persona_menor, @nombre_menor, @apellido_menor, @dni_menor, @email_menor, @fecha_nac_menor, @telefono_menor, 0;
+        @id_persona_menor, @nombre_menor, @apellido_menor, @dni_menor, @email_menor, @fecha_nac_menor, @telefono_menor, 0, NULL;
 
     -- Obtener socio menor
     DECLARE @id_socio INT;
@@ -441,7 +448,7 @@ BEGIN
 
     -- Actualizar responsable
     EXEC socios.actualizar_persona_sp
-        @id_persona_resp, @nombre_resp, @apellido_resp, @dni_resp, @email_resp, @fecha_nac_resp, @telefono_resp, 0;
+        @id_persona_resp, @nombre_resp, @apellido_resp, @dni_resp, @email_resp, @fecha_nac_resp, @telefono_resp, 0, @id_medio_de_pago_resp;
 END
 GO
 

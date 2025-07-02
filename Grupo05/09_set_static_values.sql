@@ -38,7 +38,6 @@ BEGIN
 END
 SELECT * FROM socios.Categoria
 
-
 -- Carga de datos en la tabla tarifa categoría
 IF NOT EXISTS (
 	SELECT 1 FROM socios.TarifaCategoria
@@ -165,12 +164,12 @@ SELECT * FROM socios.TarifaActividadRecreativa
 -- Carga de MedioDePago
 IF NOT EXISTS (
 	SELECT 1 FROM socios.MedioDePago
-		WHERE id_medio BETWEEN 1 AND 6
+		WHERE id_medio_de_pago BETWEEN 1 AND 6
 )
 BEGIN
 	SET IDENTITY_INSERT socios.MedioDePago ON;
 	INSERT INTO socios.MedioDePago
-	(id_medio, nombre)
+	(id_medio_de_pago, nombre)
 	VALUES
 	(1, 'Visa'),
 	(2, 'MasterCard'),
@@ -178,6 +177,6 @@ BEGIN
 	(4, 'Pago Fácil'),
 	(5, 'Rapipago'),
 	(6, 'Transferencia Mercado Pago');
-	SET IDENTITY_INSERT socios.TarifaActividadRecreativa OFF;
+	SET IDENTITY_INSERT socios.MedioDePago OFF;
 END
 SELECT * FROM socios.MedioDePago
